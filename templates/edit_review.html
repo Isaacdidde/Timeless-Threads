@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     REVIEW EDIT PAGE
+     Allows a logged-in user to edit an existing product review.
+     Includes:
+       - Rating dropdown (1–5 stars)
+       - Review textarea
+       - Submit button
+========================================================== -->
+
+<div class="container mt-5" style="max-width:600px;">
+
+    <!-- Page Title -->
+    <h3>Edit Your Review</h3>
+    <hr>
+
+    <!-- ======================================================
+         REVIEW EDIT FORM
+         Method: POST
+         Handled by ReviewController in your routes.
+    ======================================================= -->
+    <form method="POST">
+
+        <!-- Rating Selector -->
+        <label class="fw-bold">Rating</label>
+        <select name="rating" class="form-select mb-3">
+            {% for x in range(1,6) %}
+            <option value="{{ x }}" 
+                    {% if x == review.rating %}selected{% endif %}>
+                {{ x }} ★
+            </option>
+            {% endfor %}
+        </select>
+
+        <!-- Review Textarea -->
+        <label class="fw-bold">Review</label>
+        <textarea class="form-control" 
+                  name="review" 
+                  rows="4">{{ review.review }}</textarea>
+
+        <!-- Save Changes -->
+        <button class="btn btn-dark mt-3">Save Changes</button>
+
+    </form>
+</div>
+
+{% endblock %}

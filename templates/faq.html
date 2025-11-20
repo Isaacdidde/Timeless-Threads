@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads CSS dedicated to FAQ page layout & styling.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/faq.css') }}">
+{% endblock %}
+
+
+<!-- ==========================================================
+     FAQ PAGE CONTAINER
+     Holds a clean accordion interface for common questions.
+========================================================== -->
+<div class="faq-container">
+
+    <!-- Page Heading -->
+    <h2 class="faq-title">Frequently Asked Questions</h2>
+
+    <!-- ======================================================
+         Bootstrap Accordion
+         Each FAQ is an accordion-item with:
+           - A toggle button
+           - A collapsible content body
+         ID attributes ensure the correct item opens.
+    ======================================================= -->
+    <div class="accordion" id="faqAccordion">
+
+
+        <!-- ==========================
+             FAQ 1
+             Default expanded on page load
+        =========================== -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#faq1">
+                    What is your return policy?
+                </button>
+            </h2>
+
+            <div id="faq1" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                    We allow returns within 7 days of delivery for unused items with all tags intact.
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==========================
+             FAQ 2
+        =========================== -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#faq2">
+                    Do you offer Cash on Delivery?
+                </button>
+            </h2>
+
+            <div id="faq2" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    Yes! COD is available in most cities across India.
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==========================
+             FAQ 3
+        =========================== -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#faq3">
+                    How many days does delivery take?
+                </button>
+            </h2>
+
+            <div id="faq3" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    Delivery takes 3–7 business days depending on your location.
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

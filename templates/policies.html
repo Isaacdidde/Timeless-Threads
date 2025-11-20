@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads CSS used only for the policies page.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/policies.css') }}">
+{% endblock %}
+
+
+<!-- ==========================================================
+     STORE POLICIES SECTION
+     A simple, clean list summarizing important customer policies.
+     Styled via policies.css for consistent spacing and typography.
+========================================================== -->
+<div class="policy-box">
+
+    <!-- Page Title -->
+    <h2 class="policy-title">Store Policies</h2>
+
+    <!-- ======================================================
+         POLICY LIST
+         Each bullet highlights a key store policy such as:
+           - Security
+           - Delivery
+           - Return/Exchange
+           - Quality checks
+           - Privacy
+    ======================================================= -->
+    <ul class="policy-list">
+        <li>✔ Secure SSL-encrypted payment gateway.</li>
+        <li>✔ Fast delivery across India with real-time tracking.</li>
+        <li>✔ Hassle-free 7-day return & exchange policy.</li>
+        <li>✔ All products undergo quality checks before shipping.</li>
+        <li>✔ Your personal data is never shared with third parties.</li>
+    </ul>
+</div>
+
+{% endblock %}

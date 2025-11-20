@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads CSS file for search results grid + card styling.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/search_results.css') }}">
+{% endblock %}
+
+
+
+<!-- ==========================================================
+     PAGE TITLE — Shows the current search query
+========================================================== -->
+<h2 class="search-title">
+    Search results for: “{{ query }}”
+</h2>
+
+
+
+<!-- ==========================================================
+     SEARCH RESULTS GRID
+     Displays matching products or a “No results” message.
+========================================================== -->
+<div class="row search-grid">
+
+    {% if results %}
+        <!-- ==========================================
+             LOOP THROUGH ALL MATCHING PRODUCTS
+             Each product appears as:
+               - image
+               - name
+               - price
+               - link to product detail page
+        =========================================== -->
+        {% for p in results %}
+        <div class="col-md-3 mb-4">
+
+            <div class="search-card card shadow-sm">
+
+                <!-- Product Image -->
+                <img src="{{ url_for('static', filename='images/products/' ~ p.image) }}"
+                     class="search-img"
+                     alt="{{ p.name }}">
+
+                <div class="card-body">
+
+                    <!-- Product Name -->
+                    <div class="search-title-text">{{ p.name }}</div>
+
+                    <!-- Product Price -->
+                    <div class="search-price">₹{{ p.price }}</div>
+
+                    <!-- Link to Product -->
+                    <a href="{{ url_for('product.product_detail', product_id=p._id|string) }}"
+                       class="btn search-btn">
+                        View Product
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+
+
+
+    {% else %}
+        <!-- ==========================================
+             NO RESULTS MESSAGE
+             Displayed if no products match the search query
+        =========================================== -->
+        <div class="col-12">
+            <div class="no-results">
+                No results found for “{{ query }}”.
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.env
+.env.* 
+instance/
+*.sqlite3
+
+# Flask
+instance/
+*.egg-info/
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# node (if frontend assets)
+node_modules/
+
+# build/dist
+dist/
+build/
+*.log
+
+# secrets / keys
+*.pem
+*.key

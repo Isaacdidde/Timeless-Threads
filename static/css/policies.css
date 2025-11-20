@@ -1,0 +1,20 @@
+
+.policy-box {
+    max-width: 800px;
+    margin: auto;
+    padding: 25px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.policy-title {
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.policy-list li {
+    margin-bottom: 12px;
+    line-height: 1.6;
+}
+

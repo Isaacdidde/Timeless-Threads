@@ -1,0 +1,36 @@
+
+.faq-container {
+    max-width: 800px;
+    margin: auto;
+}
+
+.faq-title {
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+.accordion-item {
+    border-radius: 12px !important;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.accordion-button {
+    font-weight: 600;
+    padding: 16px;
+    border: none;
+    background: #fff;
+}
+
+.accordion-button:not(.collapsed) {
+    background: #000;
+    color: #fff;
+}
+
+.accordion-body {
+    background: #fafafa;
+    padding: 18px 20px;
+    border-top: 1px solid #eee;
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ title if title else "Timeless Threads Boutique" }}</title>
+
+    <!-- Google Fonts (Inter + Poppins) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Core CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- ==========================================================
+     NAVBAR — Logo, Search Bar, Cart, User Menu
+     Sticky-top: stays visible while scrolling
+========================================================== -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+  <div class="container">
+    
+    <!-- Brand / Logo -->
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.home') }}">
+      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="logo" height="40">
+      <span class="brand-name">Timeless Threads</span>
+    </a>
+
+    <!-- Mobile toggle -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Navbar Menu -->
+    <div class="collapse navbar-collapse" id="navMenu">
+
+      <!-- SEARCH BAR -->
+      <form class="d-flex ms-auto me-3" action="{{ url_for('main.search') }}" method="get">
+        <input class="form-control form-control-sm me-2 search-input"
+               name="q"
+               type="search"
+               placeholder="Search products">
+        <button class="btn btn-outline-dark btn-sm" type="submit">Search</button>
+      </form>
+
+      <!-- RIGHT NAVIGATION -->
+      <ul class="navbar-nav align-items-center">
+        
+        <!-- CART LINK -->
+        <li class="nav-item me-3">
+          <a class="nav-link cart-link" href="{{ url_for('product.cart') }}">🛒 Cart</a>
+        </li>
+
+        <!-- USER MENU (if logged in) -->
+        {% if session.get('user') %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle text-primary"
+             href="#"
+             id="userMenu"
+             role="button"
+             data-bs-toggle="dropdown"
+             aria-expanded="false">
+            {{ session['user'] }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" href="{{ url_for('auth.logout_page') }}">Logout</a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- LOGIN / SIGNUP BUTTON (if NOT logged in) -->
+        {% else %}
+        <li class="nav-item">
+          <a class="nav-link btn btn-sm btn-outline-dark" href="{{ url_for('auth.login') }}">
+            Login / Signup
+          </a>
+        </li>
+        {% endif %}
+
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+<!-- ==========================================================
+     FLASH MESSAGES (Success/Warning/Error Toasts)
+========================================================== -->
+<div class="container mt-3">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</div>
+
+<!-- ==========================================================
+     MAIN CONTENT — Injected via Jinja block
+========================================================== -->
+<main class="container my-4">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ==========================================================
+     FOOTER — Modern, Clean, Responsive Layout
+========================================================== -->
+<footer class="tt-footer">
+  <div class="container">
+
+    <div class="row g-4">
+
+      <!-- BRAND + SHORT DESCRIPTION -->
+      <div class="col-md-4">
+        <div class="footer-brand">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" height="40">
+          <span class="footer-brand-text">Timeless Threads</span>
+        </div>
+        <p class="footer-desc">
+          Curated styles crafted with elegance and comfort.<br>
+          Discover outfits that match your story.
+        </p>
+      </div>
+
+      <!-- QUICK LINKS -->
+      <div class="col-6 col-md-2">
+        <h6 class="footer-title">Quick Links</h6>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('main.home') }}">Home</a></li>
+          <li><a href="{{ url_for('main.faq') }}">FAQs</a></li>
+          <li><a href="{{ url_for('main.policies') }}">Policies</a></li>
+          <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
+        </ul>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="col-6 col-md-3">
+        <h6 class="footer-title">Categories</h6>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('product.category_view', category_name='ethnic') }}">Ethnic Wear</a></li>
+          <li><a href="{{ url_for('product.category_view', category_name='sarees') }}">Sarees</a></li>
+          <li><a href="{{ url_for('product.category_view', category_name='casual') }}">Casual</a></li>
+          <li><a href="{{ url_for('product.category_view', category_name='cosmetics') }}">Cosmetics</a></li>
+        </ul>
+      </div>
+
+      <!-- SOCIAL LINKS -->
+      <div class="col-md-3">
+        <h6 class="footer-title">Connect</h6>
+        <div class="footer-socials">
+          <a href="#"><i class="bi bi-instagram"></i></a>
+          <a href="#"><i class="bi bi-facebook"></i></a>
+          <a href="#"><i class="bi bi-twitter"></i></a>
+          <a href="#"><i class="bi bi-youtube"></i></a>
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="footer-divider">
+
+    <!-- COPYRIGHT -->
+    <div class="footer-bottom text-center">
+      © 2025 Timeless Threads Boutique — All Rights Reserved
+    </div>
+
+  </div>
+</footer>
+
+<!-- ==========================================================
+     SCRIPTS — Bootstrap + Custom Main Script
+========================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

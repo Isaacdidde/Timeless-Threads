@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads CSS for the signup name page (step 2 of signup).
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/Signup.css') }}">
+{% endblock %}
+
+
+
+<!-- ==========================================================
+     SIGNUP PAGE BACKGROUND WRAPPER
+========================================================== -->
+<div class="auth-bg">
+
+    <!-- ======================================================
+         SIGNUP CARD (Step 2)
+         User enters their full name here.
+         Mobile number was captured earlier and passed as hidden.
+    ======================================================= -->
+    <div class="auth-card">
+
+        <!-- Title + Subtitle -->
+        <h3 class="fw-bold text-center mb-3">Create Account</h3>
+        <p class="text-center text-muted mb-4">
+            Welcome! Let's get your profile set up.
+        </p>
+
+        <!-- ==================================================
+             NAME INPUT FORM
+             POST → /auth/signup-submit-name
+             Controller:
+               AuthController.submit_signup_name()
+        =================================================== -->
+        <form action="{{ url_for('auth.signup_submit_name') }}" method="post">
+
+            <!-- Hidden field carrying mobile number from previous step -->
+            <input type="hidden" name="mobile" value="{{ mobile }}">
+
+            <!-- Name Field -->
+            <label class="fw-semibold">Full Name</label>
+            <input type="text"
+                   class="form-control auth-input mb-3"
+                   name="name"
+                   placeholder="Enter your name"
+                   required>
+
+            <!-- Continue to OTP -->
+            <button class="btn btn-dark auth-btn w-100">
+                Create Account
+            </button>
+        </form>
+
+        <!-- Existing user login redirect -->
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}"
+                   class="fw-semibold"
+                   style="color:#ea4c89;">
+                    Login
+                </a>
+            </small>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

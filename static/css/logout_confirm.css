@@ -1,0 +1,44 @@
+
+/* Full-screen Centering */
+.logout-wrapper {
+    min-height: 70vh;
+}
+
+/* Card Styling */
+.logout-card {
+    background: #fff;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 420px;
+    animation: popIn .4s ease;
+}
+
+/* Animation */
+@keyframes popIn {
+    0% { transform: scale(.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Buttons */
+.logout-btn {
+    font-weight: 600;
+    border-radius: 10px;
+    transition: .3s ease;
+}
+
+.logout-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Dark outline cancel */
+.btn-outline-dark {
+    border-radius: 10px;
+    transition: .3s ease;
+}
+
+.btn-outline-dark:hover {
+    transform: translateY(-2px);
+    background: #000;
+    color: #fff;
+}
+

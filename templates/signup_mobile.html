@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-STYLES
+     Loads signup_mobile.css which styles:
+       - Background layout
+       - Auth card appearance
+       - Input and button styling
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/signup_mobile.css') }}">
+{% endblock %}
+
+
+
+<!-- ==========================================================
+     SIGNUP PAGE WRAPPER
+     auth-bg → full-page background container
+========================================================== -->
+<div class="auth-bg">
+
+    <!-- ======================================================
+         SIGNUP CARD
+         Contains:
+           - Title + subtitle
+           - Mobile number input
+           - Continue button
+           - Login redirect
+    ======================================================= -->
+    <div class="auth-card">
+
+        <!-- Heading -->
+        <h3 class="fw-bold text-center mb-3">Create Account</h3>
+
+        <p class="text-center text-muted mb-4">
+            Enter your mobile number to continue
+        </p>
+
+
+        <!-- ==================================================
+             SIGNUP MOBILE FORM
+             POST → /auth/signup-verify-mobile
+             Controller:
+               AuthController.verify_signup_mobile()
+        =================================================== -->
+        <form action="{{ url_for('auth.signup_verify_mobile') }}" method="post">
+
+            <!-- Mobile Number Input -->
+            <label class="fw-semibold">Mobile Number</label>
+            <input type="text"
+                   class="form-control auth-input mb-3"
+                   name="mobile"
+                   placeholder="9876543210"
+                   required>
+
+            <!-- Continue Button -->
+            <button class="btn btn-dark auth-btn w-100">
+                Continue
+            </button>
+        </form>
+
+
+        <!-- ==================================================
+             LOGIN LINK (for existing users)
+        =================================================== -->
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}"
+                   class="fw-semibold"
+                   style="color:#ea4c89;">
+                    Login
+                </a>
+            </small>
+        </div>
+
+    </div>
+
+</div> <!-- END auth-bg -->
+
+{% endblock %}

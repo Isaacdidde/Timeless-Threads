@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads custom CSS for logout confirmation UI.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/logout_confirm.css') }}">
+{% endblock %}
+
+
+<!-- ==========================================================
+     LOGOUT CONFIRMATION WRAPPER
+     Centers the confirmation card both vertically and horizontally.
+========================================================== -->
+<div class="logout-wrapper d-flex justify-content-center align-items-center">
+    
+    <!-- ======================================================
+         LOGOUT CONFIRMATION CARD
+         Contains:
+           - Title
+           - Prompt message
+           - Logout button (POST request)
+           - Cancel button redirecting to home
+    ======================================================= -->
+    <div class="logout-card shadow-lg p-4 text-center">
+
+        <!-- Title -->
+        <h3 class="fw-bold mb-2">Logout Confirmation</h3>
+
+        <!-- Description -->
+        <p class="text-muted mb-4">
+            Are you sure you want to log out from <b>Timeless Threads</b>?
+        </p>
+
+        <!-- ==================================================
+             FORM — POST to confirm logout
+             Route:
+               auth.logout_confirm
+        =================================================== -->
+        <form action="{{ url_for('auth.logout_confirm') }}" method="post">
+
+            <!-- Confirm Logout Button -->
+            <button type="submit"
+                    class="btn btn-danger w-100 py-2 mb-2 logout-btn">
+                Yes, Logout
+            </button>
+
+            <!-- Cancel Button → return to home page -->
+            <a href="{{ url_for('main.home') }}"
+               class="btn btn-outline-dark w-100 py-2">
+               Cancel
+            </a>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

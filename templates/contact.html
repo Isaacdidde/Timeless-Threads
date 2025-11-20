@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads a dedicated CSS file for contact page layout.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/contact.css') }}">
+{% endblock %}
+
+
+
+<!-- ==========================================================
+     CONTACT PAGE CONTAINER
+     Centers the content and applies custom styling via CSS.
+========================================================== -->
+<div class="contact-container">
+
+    <div class="contact-card">
+
+        <!-- Header -->
+        <h2 class="contact-title">Contact Us</h2>
+        <p class="text-muted">
+            We’d love to help you. Reach out through any of the options below.
+        </p>
+
+        <!-- ======================================================
+             CONTACT ROW
+             Three contact methods:
+               - Email
+               - Phone
+               - Address
+             Icons are Bootstrap Icons.
+        ====================================================== -->
+        <div class="contact-row">
+
+            <!-- ================= EMAIL ================= -->
+            <div class="contact-item">
+                <i class="bi bi-envelope-fill"></i>
+                <h6 class="fw-bold mt-2">Email</h6>
+                <p class="text-muted small">support@timelessthreads.com</p>
+            </div>
+
+            <!-- ================= PHONE ================= -->
+            <div class="contact-item">
+                <i class="bi bi-telephone-fill"></i>
+                <h6 class="fw-bold mt-2">Phone</h6>
+                <p class="text-muted small">+91 9876543210</p>
+            </div>
+
+            <!-- ================= ADDRESS ================= -->
+            <div class="contact-item">
+                <i class="bi bi-geo-alt-fill"></i>
+                <h6 class="fw-bold mt-2">Address</h6>
+                <p class="text-muted small">Mumbai, India</p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

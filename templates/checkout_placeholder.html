@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     PAGE-SPECIFIC STYLES
+     Loads a small custom CSS file for the placeholder animation.
+     This keeps checkout-related styles separated from global CSS.
+========================================================== -->
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout_placeholder.css') }}">
+{% endblock %}
+
+
+
+<!-- ==========================================================
+     CHECKOUT PLACEHOLDER CARD
+     This is shown until the real checkout system is implemented.
+     Includes:
+       - Typewriter text animation
+       - Robot loader GIF
+       - Message + CTA button
+========================================================== -->
+<div class="d-flex justify-content-center mt-5">
+
+  <!-- Centered Card -->
+  <div class="card p-4 text-center shadow-sm" style="max-width:520px;">
+
+    <!-- Animated heading -->
+    <div class="typewriter mb-3">Checkout is Getting Ready...</div>
+
+    <!-- Robot animation -->
+    <img 
+      src="{{ url_for('static', filename='images/robot_loader.gif') }}" 
+      class="robot mb-3" 
+      alt="robot"
+    >
+
+    <!-- Description -->
+    <p class="text-muted">
+      We're crafting a smooth and secure checkout experience.  
+      Coming soon — thanks for your patience.
+    </p>
+
+    <!-- Return to home button -->
+    <a href="{{ url_for('main.home') }}" class="btn btn-outline-dark mt-3">
+      Continue Shopping
+    </a>
+
+  </div>
+</div>
+
+{% endblock %}

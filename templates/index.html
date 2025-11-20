@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ==========================================================
+     HEADER SECTION — Page Title + Subtitle
+========================================================== -->
+<div class="d-flex justify-content-between align-items-end mb-4">
+  <div>
+    <h1 class="page-title mb-0 fw-bold">Collections</h1>
+    <p class="text-muted small mb-0">Handpicked styles for every occasion</p>
+  </div>
+
+  <!-- Optional: View Cart Button (currently commented out) -->
+  <!-- <a href="{{ url_for('product.cart') }}" class="btn btn-outline-dark btn-sm">View Cart</a> -->
+</div>
+
+
+<!-- ==========================================================
+     CATEGORY GRID — Four category tiles
+     Each card links to product.category_view
+========================================================== -->
+<div class="row g-4">
+
+  <!-- ================= ETHNIC WEAR ================= -->
+  <div class="col-sm-6 col-md-3">
+    <a href="{{ url_for('product.category_view', category_name='ethnic') }}" class="text-decoration-none">
+      <div class="card product-card overflow-hidden shadow-sm">
+
+        <img src="{{ url_for('static', filename='images/categories/ethnic.jpg') }}"
+             class="product-card-img"
+             alt="Ethnic">
+
+        <div class="p-3">
+          <h5 class="mb-1 fw-semibold">Ethnic Wear</h5>
+          <small class="text-muted">Kurti, Lehenga, Anarkali</small>
+        </div>
+
+      </div>
+    </a>
+  </div>
+
+  <!-- ================= SAREES ================= -->
+  <div class="col-sm-6 col-md-3">
+    <a href="{{ url_for('product.category_view', category_name='sarees') }}" class="text-decoration-none">
+      <div class="card product-card overflow-hidden shadow-sm">
+
+        <img src="{{ url_for('static', filename='images/categories/saree.jpg') }}"
+             class="product-card-img"
+             alt="Sarees">
+
+        <div class="p-3">
+          <h5 class="mb-1 fw-semibold">Sarees</h5>
+          <small class="text-muted">Silk, Georgette, Handloom</small>
+        </div>
+
+      </div>
+    </a>
+  </div>
+
+  <!-- ================= CASUAL WEAR ================= -->
+  <div class="col-sm-6 col-md-3">
+    <a href="{{ url_for('product.category_view', category_name='casual') }}" class="text-decoration-none">
+      <div class="card product-card overflow-hidden shadow-sm">
+
+        <img src="{{ url_for('static', filename='images/categories/casual.jpg') }}"
+             class="product-card-img"
+             alt="Casual Wear">
+
+        <div class="p-3">
+          <h5 class="mb-1 fw-semibold">Women's Casual Wear</h5>
+          <small class="text-muted">Dresses, Tops, Jeans</small>
+        </div>
+
+      </div>
+    </a>
+  </div>
+
+  <!-- ================= COSMETICS ================= -->
+  <div class="col-sm-6 col-md-3">
+    <a href="{{ url_for('product.category_view', category_name='cosmetics') }}" class="text-decoration-none">
+      <div class="card product-card overflow-hidden shadow-sm">
+
+        <img src="{{ url_for('static', filename='images/categories/cosmetics.jpg') }}"
+             class="product-card-img"
+             alt="Cosmetics">
+
+        <div class="p-3">
+          <h5 class="mb-1 fw-semibold">Cosmetics</h5>
+          <small class="text-muted">Skincare & Makeup</small>
+        </div>
+
+      </div>
+    </a>
+  </div>
+
+</div>
+
+
+<!-- Divider between category tiles and featured products -->
+<hr class="my-5">
+
+
+<!-- ==========================================================
+     FEATURED PRODUCTS SECTION
+     Shows items passed from controller.home()
+========================================================== -->
+<h2 class="fw-bold mb-3">Featured Products</h2>
+
+<div class="row g-4">
+
+  {% for p in products %}
+  <div class="col-6 col-md-3">
+
+    <div class="card product-card shadow-sm h-100 position-relative">
+
+      <!-- Full card clickable via stretched-link -->
+      <a href="{{ url_for('product.product_detail', product_id=(p['_id']|string)) }}"
+         class="stretched-link"></a>
+
+      <!-- Product Image -->
+      <img src="{{ url_for('static', filename='images/products/' ~ p['image']) }}"
+           class="product-card-img"
+           alt="{{ p['name'] }}">
+
+      <div class="p-3">
+
+        <!-- Product Name -->
+        <h6 class="mb-1 text-dark fw-semibold">{{ p['name'] }}</h6>
+
+        <!-- ======================================================
+             Price Handling:
+               If discount exists → Show original + sale price
+               Otherwise → show normal price
+        ======================================================= -->
+
+        {% set original = (p['price'] / (1 - (p['discount'] / 100))) | round(0, 'ceil') %}
+
+        {% if p.discount > 0 %}
+        <div class="price">
+          <!-- Original price -->
+          <span class="text-muted text-decoration-line-through me-2">
+            ₹{{ original }}
+          </span>
+
+          <!-- Discounted price -->
+          <span class="fw-bold text-danger">₹{{ p['price'] }}</span>
+
+          <!-- Discount tag -->
+          <span class="badge bg-success ms-2">{{ p.discount }}% OFF</span>
+        </div>
+
+        {% else %}
+        <div class="price">
+          <span class="fw-bold text-dark">₹{{ p['price'] }}</span>
+        </div>
+        {% endif %}
+
+      </div> <!-- end of padding area -->
+    </div> <!-- end of card -->
+
+  </div> <!-- end column -->
+  {% endfor %}
+
+</div>
+
+{% endblock %}

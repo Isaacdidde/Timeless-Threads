@@ -1,0 +1,83 @@
+
+
+.search-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.search-grid {
+    margin-top: 25px;
+}
+
+/* PRODUCT CARD */
+.search-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform .25s ease, box-shadow .25s ease;
+    background: #fff;
+}
+
+.search-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 5px 18px rgba(0,0,0,0.08);
+}
+
+/* PRODUCT IMAGE */
+.search-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    transition: transform .35s ease;
+}
+
+.search-card:hover .search-img {
+    transform: scale(1.05);
+}
+
+/* PRODUCT TITLE */
+.search-title-text {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 6px 0;
+    height: 44px;
+    overflow: hidden;
+}
+
+/* PRICE */
+.search-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e53935;
+    margin-bottom: 8px;
+}
+
+/* VIEW BUTTON */
+/* VIEW BUTTON */
+.search-btn {
+    background-color: #000;
+    color: #fff !important;        /* FIX: Make the text visible */
+    border: none;
+    width: 100%;
+    padding: 8px 0;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: background .2s ease;
+    text-align: center;
+}
+
+.search-btn:hover {
+    background-color: #333;
+    color: #fff !important;        /* Ensures white text on hover */
+}
+
+/* NO RESULT BOX */
+.no-results {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 500;
+}
