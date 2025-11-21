@@ -1,24 +1,24 @@
 from app_factory import AppFactory
 
 # -------------------------------------------------------------
-# Application Entry Point
+# Application Entry Point (Production + Development)
 # -------------------------------------------------------------
-# This file is responsible for:
-#   ▸ Creating the Flask application instance using the AppFactory
-#   ▸ Running the development server when executed directly
+# This file must expose a top-level variable named `app`
+# so Gunicorn (Render) can import it using: gunicorn app:app
 # -------------------------------------------------------------
 
+# Create the factory and initialize the Flask application
+factory = AppFactory()
+app = factory.create_app()   # <-- Gunicorn needs THIS
+
+
+# -------------------------------------------------------------
+# Development server (only runs in local development)
+# -------------------------------------------------------------
 if __name__ == "__main__":
-    # Create an AppFactory instance (uses DevelopmentConfig by default)
-    factory = AppFactory()
-
-    # Build the fully configured Flask app
-    app = factory.create_app()
-
-    # Start the Flask development server
-    # Values pulled from config if available, otherwise fallback defaults
+    # Local development server only
     app.run(
-        debug=app.config.get("DEBUG", True),  # Enables auto-reload + debug logs
-        host="0.0.0.0",                       # Makes the server accessible on local network
-        port=5000                             # Standard development port
+        debug=app.config.get("DEBUG", True),
+        host="0.0.0.0",
+        port=5000
     )
