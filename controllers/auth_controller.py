@@ -15,19 +15,34 @@ class AuthController:
         self.otps = OTP(mongo)
         self.mongo = mongo
 
-    # ---------------------------------------------------------
-    # SEND EMAIL (Professional HTML OTP Email)
-    # ---------------------------------------------------------
+    # =====================================================================
+    # SEND EMAIL (Professional HTML Email + Debug Logging)
+    # =====================================================================
     def send_email(self, to_email, otp):
         smtp_host = os.getenv("SMTP_HOST")
-        smtp_port = int(os.getenv("SMTP_PORT"))
+        smtp_port = os.getenv("SMTP_PORT")
         smtp_user = os.getenv("EMAIL_USER")
         smtp_pass = os.getenv("EMAIL_PASSWORD")
 
+        # Debug logs (important for Render)
+        print("\n--- SMTP DEBUG (Render Logs) ---")
+        print("SMTP_HOST =", smtp_host)
+        print("SMTP_PORT =", smtp_port)
+        print("EMAIL_USER =", smtp_user)
+        print("EMAIL_PASSWORD =", "********")
+        print("--------------------------------\n")
 
-        # Beautiful HTML email
+        # Convert port safely
+        try:
+            smtp_port = int(smtp_port)
+        except:
+            print("❌ ERROR: SMTP_PORT is missing or not numeric")
+            return False
+
+        # HTML Email Template
         html_content = f"""
-        <div style="font-family:Arial; max-width:420px; margin:auto; background:#fff; padding:20px; border:1px solid #ddd; border-radius:10px;">
+        <div style="font-family:Arial; max-width:420px; margin:auto; background:#fff;
+                     padding:20px; border:1px solid #ddd; border-radius:10px;">
             <h2 style="text-align:center; color:#000; margin-bottom:10px;">
                 Timeless Threads
             </h2>
@@ -62,28 +77,36 @@ class AuthController:
             msg["To"] = to_email
             msg.attach(MIMEText(html_content, "html"))
 
-            server = smtplib.SMTP(smtp_host, smtp_port)
+            print("Connecting to SMTP server...")
+
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+            server.ehlo()
             server.starttls()
+            server.ehlo()
+
+            print("Logging in...")
             server.login(smtp_user, smtp_pass)
+
+            print("Sending email...")
             server.sendmail(smtp_user, to_email, msg.as_string())
             server.quit()
 
-            print("📩 OTP email sent successfully")
+            print("✔ OTP Email Sent Successfully")
             return True
 
         except Exception as e:
             print("❌ Email sending failed:", e)
             return False
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # LOGIN PAGE
-    # ---------------------------------------------------------
+    # =====================================================================
     def login_page(self):
         return render_template("login.html")
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # SEND LOGIN OTP
-    # ---------------------------------------------------------
+    # =====================================================================
     def send_login_email(self, email):
         if not email or "@" not in email:
             flash("Enter a valid email address!", "danger")
@@ -99,9 +122,9 @@ class AuthController:
         flash("OTP has been sent to your email!", "success")
         return render_template("verify_otp.html", email=email)
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # VERIFY LOGIN OTP
-    # ---------------------------------------------------------
+    # =====================================================================
     def verify_login_otp(self, email, otp_entered):
         if not otp_service.verify_otp(email, otp_entered):
             flash("Incorrect or expired OTP!", "danger")
@@ -117,15 +140,15 @@ class AuthController:
         flash("Email not registered. Please create an account.", "warning")
         return redirect(url_for("auth.signup_email_page"))
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # SIGNUP EMAIL PAGE
-    # ---------------------------------------------------------
+    # =====================================================================
     def signup_email_page(self):
         return render_template("signup_mobile.html")
 
-    # ---------------------------------------------------------
-    # VERIFY EMAIL NOT REGISTERED
-    # ---------------------------------------------------------
+    # =====================================================================
+    # VERIFY SIGNUP EMAIL
+    # =====================================================================
     def verify_signup_email(self, email):
         if not email or "@" not in email:
             flash("Enter a valid email address!", "danger")
@@ -138,9 +161,9 @@ class AuthController:
         session["pending_email"] = email
         return redirect(url_for("auth.signup_name"))
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # SIGNUP NAME PAGE
-    # ---------------------------------------------------------
+    # =====================================================================
     def signup_name_page(self):
         email = session.get("pending_email")
 
@@ -150,9 +173,9 @@ class AuthController:
 
         return render_template("signup.html", email=email)
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # SUBMIT NAME + SEND OTP
-    # ---------------------------------------------------------
+    # =====================================================================
     def submit_signup_name(self, name):
         email = session.get("pending_email")
 
@@ -170,9 +193,9 @@ class AuthController:
         flash("OTP sent to your email!", "success")
         return render_template("verify_otp.html", email=email)
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # VERIFY SIGNUP OTP
-    # ---------------------------------------------------------
+    # =====================================================================
     def verify_signup_otp(self, email, otp_entered):
         if not otp_service.verify_otp(email, otp_entered):
             flash("Invalid or expired OTP!", "danger")
@@ -184,12 +207,9 @@ class AuthController:
             flash("Session expired. Please try again.", "warning")
             return redirect(url_for("auth.signup_email_page"))
 
-        # Create user
         self.users.create(email=email, extra={"name": name})
-
         session["user"] = name
 
-        # Clean session
         session.pop("signup_name", None)
         session.pop("pending_email", None)
         session.pop("otp_mode", None)
@@ -197,17 +217,17 @@ class AuthController:
         flash("Account created successfully!", "success")
         return redirect(url_for("main.home"))
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # LOGOUT PAGE
-    # ---------------------------------------------------------
+    # =====================================================================
     def logout_page(self):
         if "user" not in session:
             return redirect(url_for("main.home"))
         return render_template("logout_confirm.html")
 
-    # ---------------------------------------------------------
+    # =====================================================================
     # LOGOUT ACTION
-    # ---------------------------------------------------------
+    # =====================================================================
     def logout_confirm(self):
         session.clear()
         flash("Logged out successfully!", "info")
