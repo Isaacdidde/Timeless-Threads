@@ -19,10 +19,11 @@ class AuthController:
     # SEND EMAIL (Professional HTML OTP Email)
     # ---------------------------------------------------------
     def send_email(self, to_email, otp):
-        smtp_host = os.getenv("EMAIL_HOST")
-        smtp_port = int(os.getenv("EMAIL_PORT"))
+        smtp_host = os.getenv("SMTP_HOST")
+        smtp_port = int(os.getenv("SMTP_PORT"))
         smtp_user = os.getenv("EMAIL_USER")
-        smtp_pass = os.getenv("EMAIL_PASS")
+        smtp_pass = os.getenv("EMAIL_PASSWORD")
+
 
         # Beautiful HTML email
         html_content = f"""
