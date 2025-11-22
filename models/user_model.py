@@ -6,55 +6,54 @@ class UserModel:
     Data access layer for the 'users' collection.
 
     Responsibilities:
-        - Find user by mobile number
+        - Find user by email
         - Create new user documents
         - Retrieve user by ID
 
-    This model provides a clean abstraction so controllers
-    do not need to interact directly with MongoDB queries.
+    This model abstracts MongoDB logic away from controllers.
     """
 
     def __init__(self, mongo):
-        # Reference to MongoDB 'users' collection
+        # Connect to the users collection
         self.db = mongo.db.users
 
     # ---------------------------------------------------------
-    # FIND USER BY MOBILE NUMBER
+    # FIND USER BY EMAIL
     #
-    # Mobile numbers act as unique identifiers for login/signup.
+    # Email is now the unique identifier.
     # Returns:
     #   - user document if found
-    #   - None if mobile is not registered
+    #   - None if email is not registered
     # ---------------------------------------------------------
-    def find_by_mobile(self, mobile):
+    def find_by_email(self, email):
         """
-        Return a user by their mobile number.
+        Return a user by email address.
         """
-        return self.db.find_one({"mobile": mobile})
+        return self.db.find_one({"email": email})
 
     # ---------------------------------------------------------
     # CREATE NEW USER DOCUMENT
     #
-    # Stores the user's mobile number and any additional fields.
+    # Stores the user's email and any additional fields.
     # extra can include:
-    #     name, email, address, or other profile info.
+    #     name, address, role etc.
     #
     # After inserting, returns the complete created user document.
     # ---------------------------------------------------------
-    def create(self, mobile, extra=None):
+    def create(self, email, extra=None):
         """
         Create a new user document.
 
         extra = optional dict for additional fields:
-            name, email, address, etc.
+            name, address, profile info, etc.
         """
-        data = {"mobile": mobile}
+        data = {"email": email}
 
-        # Merge extra fields only if provided and is a dictionary
+        # Add any additional fields
         if extra and isinstance(extra, dict):
             data.update(extra)
 
-        # Insert into DB and fetch the new user document
+        # Insert into DB and return the newly created user
         result = self.db.insert_one(data)
         return self.get_by_id(result.inserted_id)
 
@@ -62,9 +61,7 @@ class UserModel:
     # GET USER BY OBJECT ID
     #
     # Accepts string or ObjectId formats.
-    #
-    # If the provided user_id is invalid (not ObjectId), it
-    # safely returns None instead of crashing the application.
+    # If user_id is invalid → safely returns None.
     # ---------------------------------------------------------
     def get_by_id(self, user_id):
         """
@@ -73,5 +70,5 @@ class UserModel:
         try:
             return self.db.find_one({"_id": ObjectId(user_id)})
         except Exception:
-            # Invalid user_id → return None instead of raising error
+            # Invalid ID format
             return None

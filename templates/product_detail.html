@@ -1,39 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLES
-     Loads CSS only for the product detail page.
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/product_detail.css') }}">
 {% endblock %}
 
-<!-- Font Awesome (for star icons) -->
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
       crossorigin="anonymous"
       referrerpolicy="no-referrer" />
 
-
-
-<!-- ==========================================================
-     PRODUCT TOP SECTION — GALLERY + DETAILS
-========================================================== -->
 <div class="container luxury">
   <div class="lux-row">
 
-    <!-- ======================================================
-         LEFT SIDE — PRODUCT IMAGE GALLERY
-         Contains:
-           - Main image slider
-           - Prev/Next controls
-           - Thumbnail row
-    ======================================================= -->
+    <!-- ========================= LEFT SIDE (GALLERY) ========================= -->
     <div class="lux-left">
       <div class="gallery-card">
 
-        <!-- Main image + navigation arrows -->
         <div class="gallery-main" id="galleryMain">
           <img id="mainImage"
                src="{{ url_for('static', filename='images/products/' ~ product.image) }}">
@@ -41,12 +24,11 @@
           <button class="gallery-nav gallery-next" id="btnNext">❯</button>
         </div>
 
-        <!-- Thumbnail images -->
         <div class="thumb-row">
           {% set images = [] %}
-          {% if product.image %}{% set images = images + [product.image] %}{% endif %}
-          {% if product.image2 %}{% set images = images + [product.image2] %}{% endif %}
-          {% if product.image3 %}{% set images = images + [product.image3] %}{% endif %}
+          {% if product.image %}  {% set images = images + [product.image] %}  {% endif %}
+          {% if product.image2 %} {% set images = images + [product.image2] %} {% endif %}
+          {% if product.image3 %} {% set images = images + [product.image3] %} {% endif %}
 
           {% for img in images %}
             <img class="thumb {% if loop.first %}active{% endif %}"
@@ -57,20 +39,12 @@
       </div>
     </div>
 
-
-
-    <!-- ======================================================
-         RIGHT SIDE — PRODUCT DETAILS
-         Includes name, rating, pricing, variants, highlights,
-         specifications, and add-to-cart form.
-    ======================================================= -->
+    <!-- ========================= RIGHT SIDE DETAIL CARD ========================= -->
     <div class="lux-right">
       <div class="product-card">
 
-        <!-- Title -->
         <div class="prod-title">{{ product.name }}</div>
 
-        <!-- Rating summary -->
         {% if avg_rating %}
         <div class="mt-2">
           <span class="pd-rating-badge">{{ avg_rating }} ★</span>
@@ -78,7 +52,6 @@
         </div>
         {% endif %}
 
-        <!-- Pricing -->
         <div class="price-row">
           <div class="price-current">₹{{ product.price }}</div>
 
@@ -88,14 +61,10 @@
           {% endif %}
         </div>
 
-        <!-- Description -->
         <p class="text-muted mt-2">{{ product.description or '' }}</p>
 
-        <!-- ==================================================
-             SIZE & COLOR SELECTORS
-             Only displayed for non-cosmetic categories.
-        =================================================== -->
-        {% if product.category != 'cosmetics' %}
+        <!-- ================= SIZE & COLOR SELECTORS ================= -->
+        {% if product.category != "cosmetics" %}
 
           {% if product.sizes %}
           <div class="section-title mt-3">Select Size</div>
@@ -110,35 +79,29 @@
           <div class="section-title mt-3">Colors</div>
           <div class="selector-row" id="colorList">
             {% for c in product.colors %}
-            <div class="color-dot" style="background:'{{ c }}'"></div>
+            <div class="color-dot"
+                 style="background: {{ c }};"
+                 data-color="{{ c }}"></div>
             {% endfor %}
           </div>
           {% endif %}
 
         {% endif %}
 
-
-        <!-- ==================================================
-             ADD TO CART FORM
-             Sends:
-               - product_id
-               - selected size/color
-               - quantity
-        =================================================== -->
+        <!-- ================= ADD TO CART ================= -->
         <form action="{{ url_for('product.add_to_cart') }}" method="POST">
           <input type="hidden" name="product_id" value="{{ product._id|string }}">
           <input type="hidden" name="selected_size" id="selectedSize">
           <input type="hidden" name="selected_color" id="selectedColor">
 
           <div class="add-row">
-            <input type="number" class="form-control"
-                   name="quantity" value="1" min="1" style="width:90px;">
+            <input type="number" class="form-control" name="quantity"
+                   value="1" min="1" style="width:90px;">
             <button class="add-btn" id="addBtn" disabled>ADD TO CART</button>
           </div>
         </form>
 
-
-        <!-- Product Highlights List -->
+        <!-- ================= Highlights ================= -->
         {% if product.highlights %}
         <div class="section-title mt-4">Product Highlights</div>
         <ul class="highlights">
@@ -148,8 +111,8 @@
         </ul>
         {% endif %}
 
-        <!-- Specifications Table -->
-        {% if product.details and product.details.items %}
+        <!-- ================= Specifications ================= -->
+        {% if product.details %}
         <div class="section-title mt-4">Specifications</div>
         <table class="table specs-table">
           <tbody>
@@ -169,20 +132,14 @@
   </div>
 </div>
 
-
-
-<!-- ==========================================================
-     REVIEWS SECTION — Ratings Breakdown + Review List + Forms
-========================================================== -->
+<!-- =======================================================================
+     REVIEWS SECTION
+======================================================================= -->
 <div class="container luxury mt-5">
   <div class="reviews-block">
 
     <h3 class="section-title">Customer Reviews</h3>
 
-    <!-- ================================================
-         RATING BREAKDOWN
-         Avoids counting same user multiple times.
-    ================================================= -->
     {% set seen_users = [] %}
     {% set counts = [0,0,0,0,0] %}
 
@@ -199,16 +156,12 @@
 
     {% set total = counts | sum %}
 
-    <!-- Rating Bars + Average -->
     <div class="breakdown mt-3">
-
-      <!-- Average Score -->
       <div class="avg">
         <div class="value">{{ avg_rating or 0 }}</div>
         <div class="small-muted">{{ total }} review{{ 's' if total != 1 }}</div>
       </div>
 
-      <!-- Per-star bars -->
       <div style="flex:1">
         {% for star in range(5,0,-1) %}
         {% set idx = star - 1 %}
@@ -223,19 +176,13 @@
         </div>
         {% endfor %}
       </div>
-
     </div>
 
-
-
-    <!-- ================================================
-         LIST OF REVIEWS (1 per user)
-    ================================================= -->
+    <!-- ================= Review List ================= -->
     {% set shown_users = [] %}
     {% for r in reviews %}
       {% if r["user"] not in shown_users %}
 
-      <!-- Single Review Card -->
       <div class="review-card mt-3" id="review-{{ r['_id'] }}">
 
         <div style="max-width:80%;">
@@ -244,16 +191,15 @@
 
           <div class="text-muted" style="font-size:12px;">
             {% if r.get("updated_at") %}
-            Updated {{ r["updated_at"].strftime('%Y-%m-%d') }}
+              Updated {{ r["updated_at"].strftime('%Y-%m-%d') }}
             {% elif r.get("created_at") %}
-            Posted {{ r["created_at"].strftime('%Y-%m-%d') }}
+              Posted {{ r["created_at"].strftime('%Y-%m-%d') }}
             {% endif %}
           </div>
 
           <p class="mt-2">{{ r["review"] }}</p>
         </div>
 
-        <!-- Edit/Delete options for the review owner -->
         {% if session.get('user') == r["user"] %}
         <div>
           <button class="btn btn-outline-primary btn-sm edit-btn"
@@ -268,11 +214,8 @@
           </form>
         </div>
         {% endif %}
-
       </div>
 
-
-      <!-- Inline Review Edit Form (Hidden by default) -->
       <div class="review-edit" id="edit-{{ r['_id'] }}">
         <form method="POST"
               action="{{ url_for('review.add_review',
@@ -283,16 +226,13 @@
                  class="edit-rating"
                  value="{{ r['rating'] | int }}">
 
-          <!-- Edit Star Rating -->
           <div class="star-row edit-stars">
             {% for s in range(1,6) %}
-            <i class="fa fa-star edit-star
-                 {% if s <= (r['rating']|int) %}active{% endif %}"
+            <i class="fa fa-star edit-star {% if s <= (r['rating']|int) %}active{% endif %}"
                data-value="{{ s }}"></i>
             {% endfor %}
           </div>
 
-          <!-- Edit Review Text -->
           <textarea name="review" class="form-control mt-2"
                     rows="3">{{ r["review"] }}</textarea>
 
@@ -305,19 +245,11 @@
         </form>
       </div>
 
-
       {% set shown_users = shown_users + [r["user"]] %}
       {% endif %}
     {% endfor %}
 
-
-
-    <!-- ================================================
-         REVIEW FORM FOR NEW REVIEWERS
-         Only shown if:
-           - user is logged in
-           - user has NOT already reviewed this product
-    ================================================= -->
+    <!-- ================= Add New Review ================= -->
     {% if session.get('user') %}
 
       {% set user_review = None %}
@@ -333,7 +265,6 @@
             action="{{ url_for('review.add_review',
                                product_id=product._id|string) }}">
 
-        <!-- Star Rating Selector -->
         <label>Your Rating</label>
         <div class="star-row new-stars mt-1">
           {% for s in range(1,6) %}
@@ -341,10 +272,8 @@
           {% endfor %}
         </div>
 
-        <!-- Hidden input storing selected rating -->
         <input type="hidden" name="rating" id="newRating" required>
 
-        <!-- Review Text -->
         <label class="mt-2">Write a Review</label>
         <textarea name="review" class="form-control"
                   rows="4" required></textarea>
@@ -359,17 +288,11 @@
         You already reviewed this product. Use Edit above.
       </p>
       {% endif %}
-
     {% endif %}
 
   </div>
 </div>
 
-
-
-<!-- ==========================================================
-     PAGE-SPECIFIC SCRIPTS
-========================================================== -->
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/product_detail.js') }}"></script>
 {% endblock %}

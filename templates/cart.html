@@ -1,23 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     CART PAGE — Shows all cart items + order summary
-========================================================== -->
-
 <h2 class="fw-bold mb-4">Your Cart</h2>
 
 {% if cart_items %}
 <div class="row g-3">
 
-  <!-- ======================================================
-       LEFT SIDE — CART ITEMS LIST
-       Each item shows:
-         - Product image
-         - Name, size, color, quantity
-         - Line total
-         - Remove button
-  ====================================================== -->
+  <!-- LEFT: CART ITEMS -->
   <div class="col-lg-8">
 
     {% for item in cart_items %}
@@ -32,36 +21,45 @@
           style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;"
         />
 
-        <!-- PRODUCT DETAILS (Name, size, color, quantity, price) -->
         <div>
 
           <!-- Name -->
           <h6 class="mb-1">{{ item.product.name }}</h6>
 
-          <!-- Conditional Size -->
+          <!-- Size -->
           {% if item.size %}
           <div class="small"><b>Size:</b> {{ item.size }}</div>
           {% endif %}
 
-          <!-- Conditional Color -->
+          <!-- Color -->
           {% if item.color %}
-          <div class="small d-flex align-items-center">
-            <b>Color:</b>
+          <div class="small d-flex align-items-center mt-1">
 
-            <!-- Small square preview of the color -->
+            <b class="me-1">Color:</b>
+
+            <!-- Color Preview Box -->
             <span
               class="color-preview"
-              data-color="{{ item.color }}"
+              style="
+                width:14px;
+                height:14px;
+                display:inline-block;
+                background: {{ item.color }};
+                border:1px solid #ccc;
+                border-radius:3px;
+                margin-left:6px;
+              "
             ></span>
 
             <span class="ms-2">{{ item.color }}</span>
+
           </div>
           {% endif %}
 
-          <!-- Quantity -->
+          <!-- Qty -->
           <div class="small text-muted mt-1">Qty: {{ item.quantity }}</div>
 
-          <!-- Line total -->
+          <!-- Line Total -->
           <div class="fw-bold text-danger mt-1">
             ₹{{ item.product.price }} × {{ item.quantity }} = ₹{{ item.total }}
           </div>
@@ -69,10 +67,7 @@
         </div>
       </div>
 
-      <!-- ==================================================
-           REMOVE ITEM BUTTON
-           Uses product_id + size + color to identify variant
-      ================================================== -->
+      <!-- REMOVE BUTTON -->
       <a 
         href="{{ url_for(
           'product.remove_item',
@@ -89,26 +84,18 @@
 
   </div>
 
-  <!-- ======================================================
-       RIGHT SIDE — ORDER SUMMARY CARD
-       Shows:
-         - Total items
-         - Grand total
-         - Checkout button
-  ====================================================== -->
+  <!-- RIGHT: ORDER SUMMARY -->
   <div class="col-lg-4">
     <div class="card p-3 shadow-sm">
 
       <h5 class="fw-bold">Order Summary</h5>
       <hr />
 
-      <!-- Item count -->
       <div class="d-flex justify-content-between">
         <span>Items</span>
         <span>{{ cart_items|length }}</span>
       </div>
 
-      <!-- Grand total (sum of all 'total' values) -->
       <div class="d-flex justify-content-between mt-2">
         <span class="fw-bold">Total</span>
         <span class="fw-bold text-danger">
@@ -116,7 +103,6 @@
         </span>
       </div>
 
-      <!-- Checkout -->
       <a href="{{ url_for('product.checkout') }}" class="btn btn-dark w-100 mt-4">
         Proceed to Checkout
       </a>
@@ -127,9 +113,6 @@
 </div>
 
 {% else %}
-<!-- ==========================================================
-     EMPTY CART STATE
-========================================================== -->
 <div class="alert alert-secondary">Your cart is empty.</div>
 <a href="{{ url_for('main.home') }}" class="btn btn-outline-dark">Continue Shopping</a>
 {% endif %}

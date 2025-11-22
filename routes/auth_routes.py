@@ -4,121 +4,87 @@ from controllers.auth_controller import AuthController
 
 # ---------------------------------------------------------
 # AUTH BLUEPRINT
-#
-# This blueprint groups all authentication-related routes:
-#   - Login (OTP-based)
-#   - Signup (multi-step: mobile → name → verify OTP → create account)
-#   - Logout
-#
-# The AuthController handles all the business logic.
 # ---------------------------------------------------------
 auth_bp = Blueprint("auth", __name__)
 controller = AuthController(mongo)
 
-
 # ---------------------------------------------------------
-# LOGIN PAGE (GET)
-#
-# Renders the login form where user enters mobile number.
+# LOGIN PAGE
 # ---------------------------------------------------------
 @auth_bp.route("/login")
 def login():
     return controller.login_page()
 
+# ---------------------------------------------------------
+# SEND LOGIN OTP (EMAIL)
+# ---------------------------------------------------------
+@auth_bp.route("/send-login-email", methods=["POST"])
+def send_login_email():
+    email = request.form.get("email")
+    return controller.send_login_email(email)
 
 # ---------------------------------------------------------
-# SEND LOGIN OTP (POST)
-#
-# Receives mobile number from form and sends OTP.
-# Redirects to OTP verification page.
+# VERIFY LOGIN OTP
 # ---------------------------------------------------------
-@auth_bp.route("/send-otp", methods=["POST"])
-def send_otp():
-    mobile = request.form.get("mobile")
-    return controller.send_login_otp(mobile)
-
-
-# ---------------------------------------------------------
-# VERIFY OTP (POST)
-#
-# Called after user submits OTP during login/signup.
-# Controller determines whether this is login or signup mode.
-# ---------------------------------------------------------
-@auth_bp.route("/verify-otp", methods=["POST"])
-def verify_otp():
-    mobile = request.form.get("mobile")
+@auth_bp.route("/verify-login-otp", methods=["POST"])
+def verify_login_otp():
+    email = request.form.get("email")
     otp = request.form.get("otp")
-    return controller.verify_otp(mobile, otp)
-
+    return controller.verify_login_otp(email, otp)
 
 # ---------------------------------------------------------
-# SIGNUP FLOW — STEP 1
-#
-# Display mobile input for signup.
+# SIGNUP STEP 1 — Email Input Page
 # ---------------------------------------------------------
 @auth_bp.route("/signup")
-def signup_mobile():
-    return controller.signup_mobile_page()
-
-
-# ---------------------------------------------------------
-# SIGNUP FLOW — STEP 1 SUBMISSION
-#
-# Validates mobile, checks duplicates, then moves to name step.
-# ---------------------------------------------------------
-@auth_bp.route("/signup-verify-mobile", methods=["POST"])
-def signup_verify_mobile():
-    mobile = request.form.get("mobile")
-    return controller.verify_signup_mobile(mobile)
-
+def signup_email_page():
+    return controller.signup_email_page()
 
 # ---------------------------------------------------------
-# SIGNUP FLOW — STEP 2
-#
-# User enters their name after mobile verification.
+# SIGNUP STEP 1 SUBMIT — Validate Email
+# ---------------------------------------------------------
+@auth_bp.route("/signup-verify-email", methods=["POST"])
+def signup_verify_email():
+    email = request.form.get("email")
+    return controller.verify_signup_email(email)
+
+# ---------------------------------------------------------
+# SIGNUP STEP 2 — Enter Name Page
 # ---------------------------------------------------------
 @auth_bp.route("/signup-name")
 def signup_name():
     return controller.signup_name_page()
 
-
 # ---------------------------------------------------------
-# SIGNUP FLOW — STEP 2 SUBMISSION
-#
-# Submits the name and triggers OTP for signup verification.
+# SIGNUP STEP 2 SUBMIT — Save Name + Send OTP
 # ---------------------------------------------------------
 @auth_bp.route("/signup-submit-name", methods=["POST"])
 def signup_submit_name():
     name = request.form.get("name")
     return controller.submit_signup_name(name)
 
+# ---------------------------------------------------------
+# VERIFY SIGNUP OTP
+# ---------------------------------------------------------
+@auth_bp.route("/verify-signup-otp", methods=["POST"])
+def verify_signup_otp():
+    email = request.form.get("email")
+    otp = request.form.get("otp")
+    return controller.verify_signup_otp(email, otp)
 
 # ---------------------------------------------------------
-# FINAL ACCOUNT CREATION (GET)
-#
-# Runs only after OTP verification.
-# Creates the user and logs them in automatically.
+# FINAL SIGNUP — Create Account
 # ---------------------------------------------------------
 @auth_bp.route("/complete-signup")
 def complete_signup():
     return controller.complete_signup()
 
-
 # ---------------------------------------------------------
-# LOGOUT — CONFIRMATION PAGE (GET)
-#
-# Asks user to confirm logout.
+# LOGOUT PAGES
 # ---------------------------------------------------------
 @auth_bp.route("/logout")
 def logout_page():
     return controller.logout_page()
 
-
-# ---------------------------------------------------------
-# LOGOUT — FINAL ACTION (POST)
-#
-# Clears session and logs out user.
-# ---------------------------------------------------------
 @auth_bp.route("/logout-confirm", methods=["POST"])
 def logout_confirm():
     return controller.logout_confirm()

@@ -60,7 +60,12 @@ def add_multi_images(product):
 # Helper: Ensure sizes[] and colors[] exist
 # ---------------------------------------------------------
 DEFAULT_SIZES = ["S", "M", "L", "XL"]
-DEFAULT_COLORS = ["Red", "Blue", "Black"]
+DEFAULT_COLORS = [
+    "#ff4b4b",   # red
+    "#4577ff",   # blue
+    "#111111"    # black
+]
+
 
 def add_missing_variants(product):
     if "sizes" not in product:

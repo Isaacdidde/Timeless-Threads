@@ -3,181 +3,211 @@ from models.user_model import UserModel
 from models.otp_model import OTP
 from utils.otp_generator import otp_service
 import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import os
 
 
 class AuthController:
     def __init__(self, mongo):
-        # Initialize database models
-        self.users = UserModel(mongo)     # Handles user-related DB operations
-        self.otps = OTP(mongo)            # Handles OTP-related DB operations
+        self.users = UserModel(mongo)
+        self.otps = OTP(mongo)
         self.mongo = mongo
 
     # ---------------------------------------------------------
-    # LOGIN PAGE (simply returns template)
+    # SEND EMAIL (Professional HTML OTP Email)
+    # ---------------------------------------------------------
+    def send_email(self, to_email, otp):
+        smtp_host = os.getenv("EMAIL_HOST")
+        smtp_port = int(os.getenv("EMAIL_PORT"))
+        smtp_user = os.getenv("EMAIL_USER")
+        smtp_pass = os.getenv("EMAIL_PASS")
+
+        # Beautiful HTML email
+        html_content = f"""
+        <div style="font-family:Arial; max-width:420px; margin:auto; background:#fff; padding:20px; border:1px solid #ddd; border-radius:10px;">
+            <h2 style="text-align:center; color:#000; margin-bottom:10px;">
+                Timeless Threads
+            </h2>
+
+            <p style="font-size:15px; color:#444;">
+                Use the OTP below to verify your identity. This code is valid for 
+                <strong>5 minutes</strong>.
+            </p>
+
+            <div style="text-align:center; margin:25px 0;">
+                <div style="font-size:32px; font-weight:bold; letter-spacing:6px; color:#222;">
+                    {otp}
+                </div>
+            </div>
+
+            <p style="font-size:14px; color:#666;">
+                If you did not request this code, you may safely ignore this email.
+            </p>
+
+            <hr style="border:none; border-top:1px solid #ddd; margin:20px 0;">
+
+            <p style="text-align:center; font-size:12px; color:#999;">
+                © {datetime.datetime.now().year} Timeless Threads • All rights reserved.
+            </p>
+        </div>
+        """
+
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "Your Timeless Threads OTP Code"
+            msg["From"] = smtp_user
+            msg["To"] = to_email
+            msg.attach(MIMEText(html_content, "html"))
+
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+            server.quit()
+
+            print("📩 OTP email sent successfully")
+            return True
+
+        except Exception as e:
+            print("❌ Email sending failed:", e)
+            return False
+
+    # ---------------------------------------------------------
+    # LOGIN PAGE
     # ---------------------------------------------------------
     def login_page(self):
         return render_template("login.html")
 
     # ---------------------------------------------------------
     # SEND LOGIN OTP
-    # Triggered after user enters mobile number
     # ---------------------------------------------------------
-    def send_login_otp(self, mobile):
-        # Validate mobile number
-        if not mobile:
-            flash("Enter a valid mobile number!", "danger")
+    def send_login_email(self, email):
+        if not email or "@" not in email:
+            flash("Enter a valid email address!", "danger")
             return redirect(url_for("auth.login"))
 
-        # Generate and send OTP
-        otp = otp_service.generate_otp(mobile)
+        otp = otp_service.generate_otp(email)
 
-        # Store necessary session data for next steps
-        session["otp_mobile"] = mobile
+        session["otp_email"] = email
         session["otp_mode"] = "login"
 
-        # Debug log (visible in terminal only)
-        print("OTP (login) →", otp)
+        self.send_email(email, otp)
 
-        flash("OTP sent successfully!", "success")
-        return render_template("verify_otp.html", mobile=mobile)
+        flash("OTP has been sent to your email!", "success")
+        return render_template("verify_otp.html", email=email)
 
     # ---------------------------------------------------------
-    # VERIFY OTP
-    # Common endpoint for both login and signup flows
+    # VERIFY LOGIN OTP
     # ---------------------------------------------------------
-    def verify_otp(self, mobile, otp_entered):
-        mode = session.get("otp_mode")  # Detect which flow we’re in (login/signup)
-
-        # Validate OTP correctness
-        if not otp_service.verify_otp(mobile, otp_entered):
-            flash("Invalid or expired OTP!", "danger")
+    def verify_login_otp(self, email, otp_entered):
+        if not otp_service.verify_otp(email, otp_entered):
+            flash("Incorrect or expired OTP!", "danger")
             return redirect(url_for("auth.login"))
 
-        # ---------------------- LOGIN FLOW ----------------------
-        if mode == "login":
-            user = self.users.find_by_mobile(mobile)
+        user = self.users.find_by_email(email)
 
-            if user:
-                # Successful login
-                session["user"] = user["name"]
-                flash("Logged in successfully!", "success")
-                return redirect(url_for("main.home"))
-            else:
-                # Mobile not registered → move to signup
-                flash("Mobile number not registered!", "warning")
-                return redirect(url_for("auth.signup_mobile"))
+        if user:
+            session["user"] = user["name"]
+            flash("Logged in successfully!", "success")
+            return redirect(url_for("main.home"))
 
-        # ---------------------- SIGNUP FLOW ----------------------
-        if mode == "signup":
-            return redirect(url_for("auth.complete_signup"))
-
-        # Fallback in case session expired or tampered
-        flash("Session expired. Please try again.", "warning")
-        return redirect(url_for("auth.login"))
+        flash("Email not registered. Please create an account.", "warning")
+        return redirect(url_for("auth.signup_email_page"))
 
     # ---------------------------------------------------------
-    # SIGNUP STEP 1 — Ask for mobile number
+    # SIGNUP EMAIL PAGE
     # ---------------------------------------------------------
-    def signup_mobile_page(self):
+    def signup_email_page(self):
         return render_template("signup_mobile.html")
 
     # ---------------------------------------------------------
-    # SIGNUP: VERIFY MOBILE NUMBER IS NOT ALREADY REGISTERED
+    # VERIFY EMAIL NOT REGISTERED
     # ---------------------------------------------------------
-    def verify_signup_mobile(self, mobile):
-        # Check for empty input
-        if not mobile:
-            flash("Enter a valid mobile number!", "danger")
-            return redirect(url_for("auth.signup_mobile"))
+    def verify_signup_email(self, email):
+        if not email or "@" not in email:
+            flash("Enter a valid email address!", "danger")
+            return redirect(url_for("auth.signup_email_page"))
 
-        # Prevent duplicate accounts
-        if self.users.find_by_mobile(mobile):
-            flash("Mobile already registered! Please login.", "warning")
+        if self.users.find_by_email(email):
+            flash("Email already registered! Please login.", "warning")
             return redirect(url_for("auth.login"))
 
-        # Store the mobile temporarily for next step
-        session["pending_mobile"] = mobile
+        session["pending_email"] = email
         return redirect(url_for("auth.signup_name"))
 
     # ---------------------------------------------------------
-    # SIGNUP STEP 2 — Ask user to enter their name
+    # SIGNUP NAME PAGE
     # ---------------------------------------------------------
     def signup_name_page(self):
-        mobile = session.get("pending_mobile")
+        email = session.get("pending_email")
 
-        # No mobile found → signup flow interrupted
-        if not mobile:
-            flash("Session expired. Try again.", "warning")
-            return redirect(url_for("auth.signup_mobile"))
+        if not email:
+            flash("Session expired. Start signup again.", "warning")
+            return redirect(url_for("auth.signup_email_page"))
 
-        return render_template("signup.html", mobile=mobile)
+        return render_template("signup.html", email=email)
 
     # ---------------------------------------------------------
-    # SIGNUP: SUBMIT NAME AND SEND OTP FOR ACCOUNT CREATION
+    # SUBMIT NAME + SEND OTP
     # ---------------------------------------------------------
     def submit_signup_name(self, name):
-        mobile = session.get("pending_mobile")
+        email = session.get("pending_email")
 
-        # Validate inputs
-        if not name or not mobile:
+        if not name or not email:
             flash("Please enter your name.", "danger")
             return redirect(url_for("auth.signup_name"))
 
-        # Store name in session for later account creation
         session["signup_name"] = name
 
-        # Generate OTP for signup verification
-        otp = otp_service.generate_otp(mobile)
-        session["otp_mode"] = "signup"  # Switch OTP mode to signup flow
+        otp = otp_service.generate_otp(email)
+        session["otp_mode"] = "signup"
 
-        print("OTP (signup) →", otp)  # Debug print
+        self.send_email(email, otp)
 
-        flash("OTP sent! Please verify.", "success")
-        return render_template("verify_otp.html", mobile=mobile)
+        flash("OTP sent to your email!", "success")
+        return render_template("verify_otp.html", email=email)
 
     # ---------------------------------------------------------
-    # SIGNUP FINAL STEP — Create user account
+    # VERIFY SIGNUP OTP
     # ---------------------------------------------------------
-    def complete_signup(self):
-        mobile = session.get("pending_mobile")
+    def verify_signup_otp(self, email, otp_entered):
+        if not otp_service.verify_otp(email, otp_entered):
+            flash("Invalid or expired OTP!", "danger")
+            return redirect(url_for("auth.signup_email_page"))
+
         name = session.get("signup_name")
 
-        # If session data is missing, user probably refreshed or session expired
-        if not mobile or not name:
-            flash("Signup session expired!", "danger")
-            return redirect(url_for("auth.signup_mobile"))
+        if not name or not email:
+            flash("Session expired. Please try again.", "warning")
+            return redirect(url_for("auth.signup_email_page"))
 
-        # Insert new user in DB
-        self.mongo.db.users.insert_one({
-            "name": name,
-            "mobile": mobile,
-            "created_at": datetime.datetime.now()
-        })
+        # Create user
+        self.users.create(email=email, extra={"name": name})
 
-        # Log the user in immediately after account creation
         session["user"] = name
 
-        # Clean up temporary session variables
-        session.pop("pending_mobile", None)
+        # Clean session
         session.pop("signup_name", None)
+        session.pop("pending_email", None)
         session.pop("otp_mode", None)
 
         flash("Account created successfully!", "success")
         return redirect(url_for("main.home"))
 
     # ---------------------------------------------------------
-    # LOGOUT — Confirmation page
+    # LOGOUT PAGE
     # ---------------------------------------------------------
     def logout_page(self):
-        # If user is not logged in, no point showing confirmation
         if "user" not in session:
             return redirect(url_for("main.home"))
         return render_template("logout_confirm.html")
 
     # ---------------------------------------------------------
-    # LOGOUT — Clear session
+    # LOGOUT ACTION
     # ---------------------------------------------------------
     def logout_confirm(self):
-        session.clear()  # Removes all session data
+        session.clear()
         flash("Logged out successfully!", "info")
         return redirect(url_for("main.home"))

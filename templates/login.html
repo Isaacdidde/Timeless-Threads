@@ -1,69 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC CSS
-     Loads styling for login background, card, and form elements.
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 {% endblock %}
 
-
-<!-- ==========================================================
-     LOGIN PAGE WRAPPER
-     auth-bg → full-page background container
-========================================================== -->
 <div class="auth-bg">
 
-    <!-- ======================================================
-         LOGIN CARD
-         Contains:
-           - Page heading
-           - Mobile number input
-           - OTP button
-           - Signup link
-    ======================================================= -->
     <div class="auth-card">
 
         <!-- Title + Subtitle -->
         <h3 class="fw-bold text-center mb-2">Welcome Back</h3>
         <p class="text-center text-muted mb-4">
-            Login with your mobile number
+            Login with your email address
         </p>
 
         <!-- ==================================================
-             LOGIN FORM
-             Method: POST → /auth/send-otp
-             Controller:
-               AuthController.send_login_otp()
+             EMAIL LOGIN FORM
+             POST → /auth/send-login-email
         =================================================== -->
-        <form action="{{ url_for('auth.send_otp') }}" method="post">
+        <form action="{{ url_for('auth.send_login_email') }}" method="post">
 
-            <!-- Mobile Number Field -->
-            <label class="fw-semibold">Mobile Number</label>
-            <input type="text"
-                   name="mobile"
-                   maxlength="10"
+            <!-- Email Field -->
+            <label class="fw-semibold">Email Address</label>
+            <input type="email"
+                   name="email"
                    class="form-control auth-input mb-3"
-                   placeholder="Enter 10-digit mobile"
+                   placeholder="Enter your email"
                    required>
 
-            <!-- OTP Button -->
+            <!-- Send OTP Button -->
             <button class="btn btn-dark auth-btn w-100 mt-2">
                 Send OTP
             </button>
         </form>
 
-        <!-- ==================================================
-             SIGNUP LINK
-             Appears below login form.
-             Redirects users to signup flow.
-        =================================================== -->
+        <!-- SIGNUP LINK -->
         <div class="text-center mt-4">
             <p class="text-muted mb-1">New to Timeless Threads?</p>
 
-            <a href="{{ url_for('auth.signup_mobile') }}"
+            <a href="{{ url_for('auth.signup_email_page') }}"
                class="btn btn-outline-dark auth-btn w-100 text-center">
                 Create an Account
             </a>

@@ -1,48 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLE SHEET
-     This CSS file controls OTP input styling and card layout.
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/verify_otp.css') }}">
 {% endblock %}
 
-
-<!-- ==========================================================
-     PAGE WRAPPER — Full background container
-========================================================== -->
 <div class="auth-bg">
 
-    <!-- ======================================================
-         OTP CARD
-         Contains:
-           - OTP message
-           - OTP input field
-           - Verify button
-           - Resend link
-    ======================================================= -->
     <div class="auth-card">
 
         <!-- Title -->
         <h3 class="fw-bold text-center mb-2">Verify OTP</h3>
 
-        <!-- Info text showing masked mobile number -->
+        <!-- Info text -->
         <p class="text-center text-muted mb-3">
-            OTP sent to <strong>{{ mobile }}</strong>
+            OTP has been sent to <strong>{{ email }}</strong>
         </p>
 
-        <!-- ==================================================
-             OTP VERIFICATION FORM
-             POST → /auth/verify-otp
-             Controller:
-               AuthController.verify_otp()
-        =================================================== -->
-        <form action="{{ url_for('auth.verify_otp') }}" method="post">
+        <!-- ================================================
+             OTP FORM
+             • If session["otp_mode"] == "signup" → signup OTP
+             • Else → login OTP
+        ================================================= -->
+        <form 
+            action="{% if session.get('otp_mode') == 'signup' %}
+                        {{ url_for('auth.verify_signup_otp') }}
+                    {% else %}
+                        {{ url_for('auth.verify_login_otp') }}
+                    {% endif %}"
+            method="post">
 
-            <!-- Hidden input to pass mobile number to backend -->
-            <input type="hidden" name="mobile" value="{{ mobile }}">
+            <!-- Hidden email -->
+            <input type="hidden" name="email" value="{{ email }}">
 
             <!-- OTP Input -->
             <label class="fw-semibold">Enter OTP</label>
@@ -50,28 +39,27 @@
                    name="otp"
                    maxlength="6"
                    class="form-control auth-input mb-3"
-                   placeholder="______"
+                   placeholder="Enter OTP"
                    required>
 
             <!-- Verify Button -->
             <button class="btn btn-dark auth-btn w-100">Verify</button>
         </form>
 
-        <!-- ==================================================
-             RESEND OTP LINK
-             Sends user to /auth/send-otp (re-triggers OTP send)
-        =================================================== -->
+        <!-- ======================================================
+             RESEND OTP — must resend EMAIL OTP, NOT mobile OTP
+        ======================================================= -->
         <div class="text-center mt-3">
             <small class="text-muted">
                 Didn’t receive it?
-                <a class="resend-link" href="{{ url_for('auth.send_otp') }}">
+                <a class="resend-link"
+                   href="{{ url_for('auth.send_login_email') }}?email={{ email }}">
                     Resend OTP
                 </a>
             </small>
         </div>
 
-    </div> <!-- END auth-card -->
-
-</div> <!-- END auth-bg -->
+    </div>
+</div>
 
 {% endblock %}
