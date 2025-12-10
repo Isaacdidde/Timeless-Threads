@@ -1,30 +1,35 @@
+# controllers/category_controller.py
+
 from flask import render_template, abort
 from models.product_model import ProductModel
 
 
 class CategoryController:
     def __init__(self, mongo):
+        """Initialize safely."""
         try:
-            self.products = ProductModel(mongo)
             self.mongo = mongo
+            self.products = ProductModel(mongo)
         except Exception as e:
             print("❌ ERROR: Failed to initialize ProductModel:", e)
-            self.products = None
             self.mongo = None
+            self.products = None
 
-    # ---------------------------------------------------------
+    # ==================================================================
     # SHOW CATEGORY PAGE (Production-Safe)
-    # ---------------------------------------------------------
+    # ==================================================================
     def show_category(self, name):
         """
-        Render a category page with product listings.
-        - Ensures DB availability
+        Renders a category page with product listings.
+
         - Validates category name
-        - Handles model failures
-        - Ensures template never crashes
+        - Ensures Mongo + ProductModel is available
+        - Always returns a safe template response
         """
 
-        # ----------- Validate category name -----------
+        # -----------------------------------------------------------
+        # Validate category name
+        # -----------------------------------------------------------
         if not name or not isinstance(name, str):
             abort(404, "Invalid category name")
 
@@ -32,21 +37,27 @@ class CategoryController:
         if not clean_name:
             abort(404, "Category not found")
 
-        # ----------- Ensure DB connection -----------
+        # -----------------------------------------------------------
+        # Ensure DB connection + Model availability
+        # -----------------------------------------------------------
         if not self.mongo or not self.products:
             print("❌ ERROR: MongoDB or ProductModel unavailable.")
-            abort(500, "Database not initialized")
+            abort(500, "Database unavailable")
 
-        # ----------- Fetch products safely -----------
+        # -----------------------------------------------------------
+        # Fetch Products Safely
+        # -----------------------------------------------------------
         try:
             products = self.products.get_by_category(clean_name)
             if products is None:
                 products = []
         except Exception as e:
-            print(f"❌ ERROR: Failed to fetch products for '{clean_name}':", e)
+            print(f"⚠ WARNING: Failed to load category '{clean_name}':", e)
             products = []
 
-        # ----------- Render template safely -----------
+        # -----------------------------------------------------------
+        # Render Template Safely
+        # -----------------------------------------------------------
         try:
             return render_template(
                 "category.html",
@@ -55,4 +66,4 @@ class CategoryController:
             )
         except Exception as e:
             print("❌ ERROR: Failed to render category template:", e)
-            abort(500, "Page render error")
+            abort(500, "Page rendering error")

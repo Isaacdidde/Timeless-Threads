@@ -2,9 +2,11 @@ from flask import (
     Blueprint, render_template, request,
     redirect, url_for, flash
 )
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from datetime import datetime
 from slugify import slugify
+
 from database.connection import get_collection
 from utils.file_upload import handle_upload
 
@@ -28,6 +30,7 @@ def products_collection():
     except Exception as e:
         print("❌ ERROR: Cannot access products collection:", e)
         return None
+
 
 def categories_collection():
     try:
@@ -56,14 +59,15 @@ def list_products():
     return render_template("admin/products/list.html", products=products)
 
 
-
 # ========================================================================
-# HELPER — PARSE MULTILINE DETAILS (Production-Safe)
+# HELPER — PARSE MULTILINE DETAILS
 # ========================================================================
 def parse_details(form):
     """
-    detail_title[] = list of titles
-    detail_items[] = list of newline-separated bullet items
+    Handles:
+        detail_title[] 
+        detail_items[]
+    Converts newlines → list bullet points
     """
     try:
         titles = form.getlist("detail_title[]")
@@ -93,7 +97,6 @@ def parse_details(form):
     return details
 
 
-
 # ========================================================================
 # ADD PRODUCT
 # ========================================================================
@@ -107,7 +110,7 @@ def add_product():
     if request.method == "POST":
         upload_path = "static/uploads/products"
 
-        # ------- IMAGE UPLOADS -------
+        # SAFELY HANDLE IMAGES
         try:
             img1 = handle_upload(request.files.get("image_file"), upload_path, {"jpg", "jpeg", "png", "webp"})
             img2 = handle_upload(request.files.get("image_file2"), upload_path, {"jpg", "jpeg", "png", "webp"})
@@ -116,47 +119,34 @@ def add_product():
             print("⚠ WARNING: Image upload failed:", e)
             img1 = img2 = img3 = None
 
-        # ------- CATEGORY -------
+        # CATEGORY VALIDATION
         category_id = request.form.get("category_id")
-
         try:
             cat = cats.find_one({"_id": ObjectId(category_id)})
-        except bson_errors.InvalidId:
-            cat = None
-        except Exception as e:
-            print("⚠ WARNING: Category lookup failed:", e)
+        except Exception:
             cat = None
 
         if not cat:
             flash("Invalid category selected!", "danger")
             return redirect(url_for("admin_product.add_product"))
 
-        # ------- SIZES & COLORS -------
-        sizes = [
-            s.strip() for s in request.form.get("sizes", "").split(",")
-            if s.strip()
-        ]
-        colors = [
-            c.strip() for c in request.form.get("colors", "").split(",")
-            if c.strip()
-        ]
-
-        # ------- PRODUCT DETAILS -------
+        # VARIANTS
+        sizes = [s.strip() for s in request.form.get("sizes", "").split(",") if s.strip()]
+        colors = [c.strip() for c in request.form.get("colors", "").split(",") if c.strip()]
         details = parse_details(request.form)
 
-        # ------- BUILD PRODUCT DOCUMENT -------
+        # BUILD DOCUMENT
         try:
             product_doc = {
                 "name": request.form.get("name", "").strip(),
                 "slug": slugify(request.form.get("name", "")),
-
                 "category_id": str(cat["_id"]),
                 "category_name": cat.get("name"),
                 "category_slug": cat.get("slug"),
 
-                "price": float(request.form.get("price", 0) or 0),
-                "discount": float(request.form.get("discount", 0) or 0),
-                "stock": int(request.form.get("stock", 0) or 0),
+                "price": float(request.form.get("price", 0)),
+                "discount": float(request.form.get("discount", 0)),
+                "stock": int(request.form.get("stock", 0)),
                 "description": request.form.get("description"),
 
                 "sizes": sizes,
@@ -171,8 +161,8 @@ def add_product():
                 "created_at": datetime.utcnow()
             }
         except Exception as e:
-            print("❌ ERROR: Failed to build product document:", e)
-            flash("Invalid input data.", "danger")
+            print("❌ ERROR building product:", e)
+            flash("Invalid product data.", "danger")
             return redirect(url_for("admin_product.add_product"))
 
         col = products_collection()
@@ -183,7 +173,7 @@ def add_product():
         try:
             col.insert_one(product_doc)
         except Exception as e:
-            print("❌ ERROR: Failed to insert product:", e)
+            print("❌ ERROR inserting product:", e)
             flash("Could not save product.", "danger")
             return redirect(url_for("admin_product.add_product"))
 
@@ -192,7 +182,6 @@ def add_product():
 
     categories = list(cats.find()) if cats else []
     return render_template("admin/products/add.html", categories=categories)
-
 
 
 # ========================================================================
@@ -208,7 +197,7 @@ def edit_product(id):
     # Load product safely
     try:
         product = col.find_one({"_id": ObjectId(id)})
-    except bson_errors.InvalidId:
+    except InvalidId:
         flash("Invalid product ID.", "danger")
         return redirect(url_for("admin_product.list_products"))
     except Exception as e:
@@ -228,16 +217,15 @@ def edit_product(id):
     if request.method == "POST":
         upload_path = "static/uploads/products"
 
-        # Upload optional new images
+        # NEW IMAGES (optional)
         try:
             new_img1 = handle_upload(request.files.get("image_file"), upload_path, {"jpg", "jpeg", "png", "webp"})
             new_img2 = handle_upload(request.files.get("image_file2"), upload_path, {"jpg", "jpeg", "png", "webp"})
             new_img3 = handle_upload(request.files.get("image_file3"), upload_path, {"jpg", "jpeg", "png", "webp"})
-        except Exception as e:
-            print("⚠ WARNING: Image upload error:", e)
+        except Exception:
             new_img1 = new_img2 = new_img3 = None
 
-        # Validate category
+        # CATEGORY VALIDATION
         try:
             category_id = request.form.get("category_id")
             cat = cats.find_one({"_id": ObjectId(category_id)})
@@ -248,19 +236,11 @@ def edit_product(id):
             flash("Invalid category!", "danger")
             return redirect(url_for("admin_product.edit_product", id=id))
 
-        # Sizes & Colors
-        sizes = [
-            s.strip() for s in request.form.get("sizes", "").split(",")
-            if s.strip()
-        ]
-        colors = [
-            c.strip() for c in request.form.get("colors", "").split(",")
-            if c.strip()
-        ]
-
+        sizes = [s.strip() for s in request.form.get("sizes", "").split(",") if s.strip()]
+        colors = [c.strip() for c in request.form.get("colors", "").split(",") if c.strip()]
         details = parse_details(request.form)
 
-        # Build update document
+        # UPDATE DOCUMENT
         try:
             update_doc = {
                 "name": request.form.get("name", "").strip(),
@@ -270,9 +250,9 @@ def edit_product(id):
                 "category_name": cat.get("name"),
                 "category_slug": cat.get("slug"),
 
-                "price": float(request.form.get("price", 0) or 0),
-                "discount": float(request.form.get("discount", 0) or 0),
-                "stock": int(request.form.get("stock", 0) or 0),
+                "price": float(request.form.get("price", 0)),
+                "discount": float(request.form.get("discount", 0)),
+                "stock": int(request.form.get("stock", 0)),
                 "description": request.form.get("description"),
 
                 "sizes": sizes,
@@ -284,14 +264,14 @@ def edit_product(id):
                 "image3": new_img3 or product.get("image3"),
             }
         except Exception as e:
-            print("❌ ERROR: Failed to parse product update:", e)
+            print("❌ ERROR parsing update:", e)
             flash("Invalid update data.", "danger")
             return redirect(url_for("admin_product.edit_product", id=id))
 
         try:
             col.update_one({"_id": ObjectId(id)}, {"$set": update_doc})
         except Exception as e:
-            print("❌ ERROR: Failed to update product:", e)
+            print("❌ ERROR updating product:", e)
             flash("Could not update product.", "danger")
             return redirect(url_for("admin_product.edit_product", id=id))
 
@@ -307,7 +287,6 @@ def edit_product(id):
     )
 
 
-
 # ========================================================================
 # DELETE PRODUCT
 # ========================================================================
@@ -320,7 +299,7 @@ def delete_product(id):
 
     try:
         oid = ObjectId(id)
-    except bson_errors.InvalidId:
+    except InvalidId:
         flash("Invalid product ID.", "danger")
         return redirect(url_for("admin_product.list_products"))
 

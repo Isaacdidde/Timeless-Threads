@@ -1,5 +1,6 @@
 from flask import flash, redirect, url_for, session
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from models.review_model import ReviewModel
 
 
@@ -50,7 +51,7 @@ class ReviewController:
         # -------------------------------------------------
         try:
             product_oid = ObjectId(product_id)
-        except bson_errors.InvalidId:
+        except InvalidId:
             flash("Invalid product ID.", "danger")
             return redirect(url_for("main.home"))
         except Exception as e:
@@ -131,7 +132,7 @@ class ReviewController:
         # Validate ID
         try:
             review_oid = ObjectId(review_id)
-        except bson_errors.InvalidId:
+        except InvalidId:
             flash("Invalid review ID.", "danger")
             return redirect(url_for("product.product_detail", product_id=product_id))
         except Exception as e:

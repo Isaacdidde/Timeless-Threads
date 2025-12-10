@@ -4,11 +4,9 @@ import os
 import logging
 from flask import Flask
 
+from seed.admin import seed_admin_user
 from config import Config, DevelopmentConfig
-from seed_admin import seed_admin_user
-
 from database.connection import init_db
-
 
 
 class AppFactory:
@@ -21,23 +19,26 @@ class AppFactory:
         3. Configure Jinja2
         4. Register context processors
         5. Register blueprints
-        6. Seed admin user (safe)
+
+    NOTE:
+        Admin seeding is NOT done here anymore.
+        It must be done manually via seed.py.
     """
 
     def __init__(self, config_class=DevelopmentConfig):
         self.config_class = config_class
 
-        # Flask instance setup
+        # Flask instance
         self.app = Flask(__name__, instance_relative_config=True)
 
-        # Default logging
+        # Logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger("timeless_threads")
 
-        # Set default DCORP backend URL — overrideable via environment
+        # Default DCorp API URL (override via .env)
         self.app.config["DCORP_API_URL"] = os.getenv(
             "DCORP_API_URL",
-            "http://127.0.0.1:5000"  # development fallback
+            "http://127.0.0.1:5000"
         )
 
     # ------------------------------------------------------
@@ -47,10 +48,10 @@ class AppFactory:
         """Load config objects and optional instance overrides."""
         self.app.config.from_object(self.config_class)
 
-        # Ensure the instance folder exists
+        # Instance folder
         os.makedirs(self.app.instance_path, exist_ok=True)
 
-        # Load instance/config.py if present
+        # Load instance-level overrides if present
         instance_config_path = os.path.join(self.app.instance_path, "config.py")
         if os.path.exists(instance_config_path):
             try:
@@ -62,14 +63,13 @@ class AppFactory:
         # Expose global settings object
         self.app.config["SETTINGS"] = Config
 
-        # Log mode
         self.logger.info("Configuration loaded (%s)", self.config_class.__name__)
 
     # ------------------------------------------------------
     # DATABASE INITIALIZATION
     # ------------------------------------------------------
     def init_extensions(self):
-        """Initialize MongoDB and any other extensions."""
+        """Initialize MongoDB and other extensions."""
         try:
             init_db(self.app)
             self.logger.info("MongoDB connected successfully.")
@@ -78,7 +78,7 @@ class AppFactory:
             raise
 
     # ------------------------------------------------------
-    # JINJA TEMPLATE ENGINE CONFIG
+    # JINJA ENVIRONMENT
     # ------------------------------------------------------
     def init_jinja(self):
         """Enable whitespace control and custom Jinja settings."""
@@ -91,7 +91,7 @@ class AppFactory:
     # CONTEXT PROCESSORS
     # ------------------------------------------------------
     def init_context_processors(self):
-        """Register global context processors (categories, ads, user info)."""
+        """Register global context processors."""
         try:
             from controllers.main_controller import register_context_processors
             register_context_processors(self.app)
@@ -100,7 +100,7 @@ class AppFactory:
             self.logger.error("Context processor registration failed → %s", err)
 
     # ------------------------------------------------------
-    # BLUEPRINT REGISTRATION
+    # BLUEPRINTS
     # ------------------------------------------------------
     def init_blueprints(self):
         """Load all blueprints from routes/__init__.py."""
@@ -113,32 +113,29 @@ class AppFactory:
             raise
 
     # ------------------------------------------------------
-    # FACTORY ENTRY POINT
+    # ENTRY POINT — CREATE APP
     # ------------------------------------------------------
     def create_app(self):
-        """Run the full boot process and return the Flask app instance."""
-        # 1. Load Core Config
+        """Run full initialization and return the Flask app instance."""
+
+        # 1. Load Configurations
         self.load_config()
 
-        # 2. Initialize database
+        # 2. Initialize MongoDB
         self.init_extensions()
 
-        # 3. Jinja engine setup
+        # 3. Setup Jinja
         self.init_jinja()
 
-        # 4. Global context processors
+        # 4. Setup Context Processors
         self.init_context_processors()
 
-        # 5. Register blueprints
+        # 5. Register Routes
         self.init_blueprints()
 
-        # 6. Seed admin user safely (only once)
-        with self.app.app_context():
-            try:
-                seed_admin_user()
-                self.logger.info("Admin seed complete.")
-            except Exception as err:
-                self.logger.warning("Admin seeding skipped or failed → %s", err)
+        # ⚠️ NOTE:
+        # Admin seeding no longer happens automatically here.
+        # Must be run manually via: python seed.py
 
         self.logger.info("Timeless Threads app initialized successfully.\n")
         return self.app

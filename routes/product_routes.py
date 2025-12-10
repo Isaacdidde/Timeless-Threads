@@ -1,150 +1,152 @@
 """
-Production-ready Product Routes
+Production-ready Product Routes for Timeless Threads V2.
 
-Fully protected against:
-    - Invalid slugs/ObjectIds
+Hardened against:
+    - Invalid product/category slugs
+    - Bad ObjectId values
     - Missing Mongo collections
-    - Query failures
-    - Ads loader failures
-    - Image list corruption
-    - Pricing calculation errors
+    - Product/Category not found errors
+    - Ads service failures
+    - Broken image arrays
+    - Price calculation errors
     - Review aggregation failures
 
-Route behavior and template rendering remain unchanged.
+Template behavior remains unchanged.
 """
 
-from flask import Blueprint, render_template, abort, request, flash
-from bson import ObjectId, errors as bson_errors
+from flask import Blueprint, render_template, abort, request
+from bson import ObjectId
+from bson.errors import InvalidId
 from database.connection import get_collection
 from api.ads.loader import load_ads_for_slots
 
 product_bp = Blueprint("product", __name__, url_prefix="")
 
 
-# ---------------------------------------------------------
-# Helper: Safe ObjectId parser
-# ---------------------------------------------------------
-def safe_object_id(value):
+# ----------------------------------------------------------------------
+# SAFE OBJECTID PARSER
+# ----------------------------------------------------------------------
+def safe_oid(value):
     try:
         return ObjectId(value)
-    except bson_errors.InvalidId:
+    except InvalidId:
         return None
     except Exception:
         return None
 
 
-# =====================================================================
+# ======================================================================
 # CATEGORY PAGE
-# =====================================================================
-@product_bp.route("/category/<category_slug>")
-def category_page(category_slug):
+# ======================================================================
+@product_bp.route("/category/<slug_or_id>")
+def category_page(slug_or_id):
 
     try:
-        cat_col = get_collection("categories")
-        prod_col = get_collection("products")
+        categories = get_collection("categories")
+        products = get_collection("products")
     except Exception as e:
-        print("❌ ERROR: DB collections unavailable:", e)
+        print("❌ ERROR: Collections unavailable:", e)
         abort(500)
 
     category = None
 
-    # ---- Try by slug ----
+    # First try slug
     try:
-        category = cat_col.find_one({"slug": category_slug})
+        category = categories.find_one({"slug": slug_or_id})
     except Exception as e:
-        print("⚠ WARNING: slug lookup failed:", e)
+        print("⚠ WARNING: slug category lookup failed:", e)
 
-    # ---- Fallback: try ObjectId ----
+    # Fallback ObjectId
     if not category:
-        oid = safe_object_id(category_slug)
+        oid = safe_oid(slug_or_id)
         if oid:
             try:
-                category = cat_col.find_one({"_id": oid})
+                category = categories.find_one({"_id": oid})
             except Exception as e:
-                print("⚠ WARNING: ObjectId lookup failed:", e)
+                print("⚠ WARNING: category ObjectId lookup failed:", e)
 
     if not category:
         abort(404)
 
-    # ---- Load products ----
+    # Fetch products in this category
     try:
-        products = list(
-            prod_col.find({"category_id": str(category["_id"])}).sort("created_at", -1)
+        items = list(
+            products.find({"category_id": str(category["_id"])}).sort("created_at", -1)
         )
     except Exception as e:
-        print("⚠ WARNING: product query failed:", e)
-        products = []
+        print("⚠ WARNING: product lookup failed:", e)
+        items = []
 
-    # ---- Load ads ----
+    # Load ads safely
     try:
         ads = load_ads_for_slots(["card_small", "product_inline"])
     except Exception as e:
-        print("⚠ WARNING: Ad loading failed:", e)
+        print("⚠ WARNING: Ad loader error:", e)
         ads = {}
 
     return render_template(
         "category.html",
         category=category,
-        products=products,
+        products=items,
         ads=ads
     )
 
 
-# =====================================================================
+# ======================================================================
 # PRODUCT DETAIL PAGE
-# =====================================================================
+# ======================================================================
 @product_bp.route("/product/<slug_or_id>")
 def product_detail(slug_or_id):
 
     try:
-        prod_col = get_collection("products")
-        review_col = get_collection("reviews")
+        products_col = get_collection("products")
+        reviews_col = get_collection("reviews")
     except Exception as e:
         print("❌ ERROR: Cannot load Mongo collections:", e)
         abort(500)
 
     product = None
 
-    # ---- Try slug ----
+    # By slug
     try:
-        product = prod_col.find_one({"slug": slug_or_id})
+        product = products_col.find_one({"slug": slug_or_id})
     except Exception as e:
-        print("⚠ WARNING: slug lookup failed:", e)
+        print("⚠ WARNING: product slug lookup failed:", e)
 
-    # ---- Try ObjectId ----
+    # By ObjectId
     if not product:
-        oid = safe_object_id(slug_or_id)
+        oid = safe_oid(slug_or_id)
         if oid:
             try:
-                product = prod_col.find_one({"_id": oid})
+                product = products_col.find_one({"_id": oid})
             except Exception as e:
-                print("⚠ WARNING: ObjectId lookup failed:", e)
+                print("⚠ WARNING: product ObjectId lookup failed:", e)
 
     if not product:
         abort(404)
 
-    # -----------------------------------------------------
-    # IMAGE CLEANUP
-    # -----------------------------------------------------
-    def clean_filename(v):
+    # ---------------------------------------------------------
+    # CLEAN IMAGES
+    # ---------------------------------------------------------
+    def clean(v):
         if not v or not isinstance(v, str):
             return None
         v = v.replace("\\", "/").strip()
-        return v.split("/")[-1] if "/" in v else v
+        return v.split("/")[-1]
 
     images = []
-
     try:
-        raw_imgs = product.get("images") or []
-        for it in raw_imgs:
-            clean = clean_filename(it)
-            if clean and clean not in images:
-                images.append(clean)
+        raw = product.get("images") or []
+        for im in raw:
+            fn = clean(im)
+            if fn and fn not in images:
+                images.append(fn)
 
+        # ensure single-image fields don't get lost
         for f in ["primary_image", "image", "image2", "image3"]:
-            clean = clean_filename(product.get(f))
-            if clean and clean not in images:
-                images.append(clean)
+            fn = clean(product.get(f))
+            if fn and fn not in images:
+                images.append(fn)
 
         if not images:
             images = ["no_image.jpg"]
@@ -155,9 +157,9 @@ def product_detail(slug_or_id):
         print("⚠ WARNING: image normalization failed:", e)
         product["__images"] = ["no_image.jpg"]
 
-    # -----------------------------------------------------
-    # PRICING
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # PRICING CALCULATION
+    # ---------------------------------------------------------
     mrp = None
     try:
         if product.get("discount"):
@@ -165,22 +167,21 @@ def product_detail(slug_or_id):
     except Exception:
         mrp = None
 
-    # -----------------------------------------------------
-    # REVIEWS
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # LOAD REVIEWS
+    # ---------------------------------------------------------
     reviews = []
     avg_rating = None
-    review_count = 0
 
     try:
-        product_oid = product["_id"]
-        product_id_str = str(product_oid)
+        pid = product["_id"]
+        pid_str = str(pid)
 
         reviews = list(
-            review_col.find({
+            reviews_col.find({
                 "$or": [
-                    {"product_id": product_oid},
-                    {"product_id": product_id_str}
+                    {"product_id": pid},
+                    {"product_id": pid_str}
                 ]
             }).sort("created_at", -1)
         )
@@ -189,14 +190,12 @@ def product_detail(slug_or_id):
             total = sum(int(r.get("rating", 0)) for r in reviews)
             avg_rating = round(total / len(reviews), 1)
 
-        review_count = len(reviews)
-
     except Exception as e:
-        print("⚠ WARNING: loading reviews failed:", e)
+        print("⚠ WARNING: failed loading reviews:", e)
 
-    # -----------------------------------------------------
-    # ADS
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # LOAD ADS
+    # ---------------------------------------------------------
     try:
         ads = load_ads_for_slots([
             "product_detail_banner",
@@ -207,23 +206,23 @@ def product_detail(slug_or_id):
         print("⚠ WARNING: ad loading failed:", e)
         ads = {}
 
-    # -----------------------------------------------------
-    # TEMPLATE
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # RENDER TEMPLATE
+    # ---------------------------------------------------------
     return render_template(
         "product_detail.html",
         product=product,
         mrp=mrp,
         reviews=reviews,
         avg_rating=avg_rating,
-        review_count=review_count,
+        review_count=len(reviews),
         ads=ads
     )
 
 
-# =====================================================================
+# ======================================================================
 # SEARCH PAGE
-# =====================================================================
+# ======================================================================
 @product_bp.route("/search")
 def search_page():
 
@@ -240,12 +239,13 @@ def search_page():
     if q and prod_col:
         try:
             results = list(
-                prod_col.find({"name": {"$regex": q, "$options": "i"}}).limit(50)
+                prod_col.find({
+                    "name": {"$regex": q, "$options": "i"}
+                }).limit(50)
             )
         except Exception as e:
             print("⚠ WARNING: search query failed:", e)
 
-    # Load ads safely
     try:
         ads = load_ads_for_slots(["search_banner"])
     except Exception as e:

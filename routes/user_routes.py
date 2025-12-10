@@ -1,35 +1,33 @@
 """
 Production-ready User Routes
-Includes:
+Handles:
+    - Profile view/update
+    - Address management
+    - Password change
+    - Session validation
     - Safe ObjectId handling
-    - Defensive database operations
-    - Form validation
-    - Sanitized inputs
-    - Clean fallbacks + error protection
-
-Public URLs remain unchanged.
 """
 
 from flask import (
     Blueprint, render_template, session, redirect,
-    url_for, request, flash, abort
+    url_for, request, flash
 )
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from werkzeug.security import check_password_hash, generate_password_hash
 from database.connection import get_collection
+from models.user_model import UserModel
 
 
 user_bp = Blueprint("user", __name__, url_prefix="/user")
 
 
 # ---------------------------------------------------------
-# Helper: Safe ObjectId
+# Helper: Safe ObjectId parser
 # ---------------------------------------------------------
 def safe_oid(value):
     try:
         return ObjectId(value)
-    except bson_errors.InvalidId:
-        return None
     except Exception:
         return None
 
@@ -40,18 +38,24 @@ def safe_oid(value):
 @user_bp.route("/profile")
 def profile_page():
     user_id = session.get("user_id")
+
     if not user_id:
         flash("Please login first.", "warning")
         return redirect(url_for("auth.login"))
 
     oid = safe_oid(user_id)
     if not oid:
-        flash("Your session is invalid. Please login again.", "danger")
         session.clear()
+        flash("Session expired. Please login again.", "danger")
         return redirect(url_for("auth.login"))
 
     users = get_collection("users")
-    user = users.find_one({"_id": oid}) or {}
+
+    try:
+        user = users.find_one({"_id": oid}) or {}
+    except Exception as e:
+        print("⚠ WARNING: Failed to load profile:", e)
+        user = {}
 
     return render_template("user/profile.html", user=user)
 
@@ -70,8 +74,8 @@ def update_profile():
         session.clear()
         return redirect(url_for("auth.login"))
 
-    name = request.form.get("name", "").strip()
-    mobile = request.form.get("mobile", "").strip()
+    name = (request.form.get("name") or "").strip()
+    mobile = (request.form.get("mobile") or "").strip()
 
     if not name:
         flash("Name cannot be empty.", "warning")
@@ -87,8 +91,8 @@ def update_profile():
         session["user_name"] = name
         flash("Profile updated successfully!", "success")
     except Exception as e:
-        print("❌ Profile update failed:", e)
-        flash("Failed to update profile. Try again later.", "danger")
+        print("❌ ERROR: Failed to update profile:", e)
+        flash("Could not update profile.", "danger")
 
     return redirect(url_for("user.profile_page"))
 
@@ -108,7 +112,12 @@ def address_page():
         return redirect(url_for("auth.login"))
 
     users = get_collection("users")
-    user = users.find_one({"_id": oid}) or {}
+
+    try:
+        user = users.find_one({"_id": oid}) or {}
+    except Exception as e:
+        print("⚠ WARNING: Failed to load address page:", e)
+        user = {}
 
     return render_template("user/address.html", user=user)
 
@@ -127,16 +136,14 @@ def save_address():
         session.clear()
         return redirect(url_for("auth.login"))
 
-    # Sanitized fields
     address = {
-        "house": request.form.get("house", "").strip(),
-        "street": request.form.get("street", "").strip(),
-        "city": request.form.get("city", "").strip(),
-        "state": request.form.get("state", "").strip(),
-        "pincode": request.form.get("pincode", "").strip(),
+        "house": (request.form.get("house") or "").strip(),
+        "street": (request.form.get("street") or "").strip(),
+        "city": (request.form.get("city") or "").strip(),
+        "state": (request.form.get("state") or "").strip(),
+        "pincode": (request.form.get("pincode") or "").strip(),
     }
 
-    # Minimal validation
     if not address["city"] or not address["pincode"]:
         flash("City and pincode are required.", "warning")
         return redirect(url_for("user.address_page"))
@@ -150,16 +157,16 @@ def save_address():
         )
         flash("Address saved successfully!", "success")
     except Exception as e:
-        print("❌ Address save failed:", e)
-        flash("Could not save address. Please try later.", "danger")
+        print("❌ ERROR: Failed to save address:", e)
+        flash("Could not save the address.", "danger")
 
     return redirect(url_for("user.address_page"))
 
 
 # ---------------------------------------------------------
-# CHANGE PASSWORD PAGE
+# CHANGE PASSWORD PAGE  (GET)
 # ---------------------------------------------------------
-@user_bp.route("/change-password")
+@user_bp.route("/change-password", methods=["GET"])
 def change_password_page():
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
@@ -167,17 +174,20 @@ def change_password_page():
 
 
 # ---------------------------------------------------------
-# UPDATE PASSWORD
+# CHANGE PASSWORD SUBMIT (POST)
 # ---------------------------------------------------------
-@user_bp.route("/update-password", methods=["POST"])
-def update_password():
+@user_bp.route("/change-password", methods=["POST"])
+def change_password_submit():
     user_id = session.get("user_id")
     if not user_id:
+        flash("Please login first.", "warning")
         return redirect(url_for("auth.login"))
 
-    oid = safe_oid(user_id)
-    if not oid:
-        session.clear()
+    user_model = UserModel()
+    user = user_model.get_by_id(user_id)
+
+    if not user:
+        flash("User not found.", "danger")
         return redirect(url_for("auth.login"))
 
     old_password = request.form.get("old_password") or ""
@@ -187,26 +197,23 @@ def update_password():
         flash("New password must be at least 6 characters.", "warning")
         return redirect(url_for("user.change_password_page"))
 
-    users = get_collection("users")
-    user = users.find_one({"_id": oid})
-
-    if not user:
-        flash("User not found.", "danger")
-        session.clear()
-        return redirect(url_for("auth.login"))
-
-    # Validate old password
-    if not check_password_hash(user.get("password", ""), old_password):
-        flash("Old password is incorrect!", "danger")
+    # Verify old password
+    try:
+        if not check_password_hash(user.get("password", ""), old_password):
+            flash("Old password is incorrect!", "danger")
+            return redirect(url_for("user.change_password_page"))
+    except Exception as e:
+        print("⚠ WARNING: Password validation failed:", e)
+        flash("Password check failed.", "danger")
         return redirect(url_for("user.change_password_page"))
 
-    # Update password
+    # Save new password
     try:
         hashed = generate_password_hash(new_password)
-        users.update_one({"_id": oid}, {"$set": {"password": hashed}})
+        user_model.update(user_id, {"password": hashed})
         flash("Password updated successfully!", "success")
     except Exception as e:
-        print("❌ Password update failed:", e)
-        flash("Could not update password. Try again later.", "danger")
+        print("❌ ERROR: Failed to update password:", e)
+        flash("Could not update password.", "danger")
 
     return redirect(url_for("user.profile_page"))

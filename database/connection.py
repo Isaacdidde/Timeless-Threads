@@ -3,16 +3,16 @@
 from flask import current_app
 from pymongo import MongoClient, errors as mongo_errors
 
-mongo_client = None  # Global pool reference (thread-safe creation)
+mongo_client = None   # Shared connection pool
 
 
 # =====================================================================
-# INIT DB
+# INIT DB (called only from app_factory)
 # =====================================================================
 def init_db(app):
     """
-    Initialize MongoDB and attach database instance to Flask app.
-    This runs inside app.app_context(), so current_app is safe.
+    Initialize MongoDB using MongoClient and attach the DB to the Flask app.
+    This MUST run inside app context → AppFactory guarantees that.
     """
 
     global mongo_client
@@ -21,98 +21,83 @@ def init_db(app):
     db_name = app.config.get("MONGO_DB_NAME")
 
     if not mongo_uri:
-        raise RuntimeError("❌ MONGO_URI is missing from settings or .env")
+        raise RuntimeError("❌ Missing MONGO_URI in config or .env file")
 
     if not db_name:
-        raise RuntimeError("❌ MONGO_DB_NAME is missing from settings or .env")
+        raise RuntimeError("❌ Missing MONGO_DB_NAME in config or .env file")
 
     try:
-        # Create a new shared Mongo client connection pool
         mongo_client = MongoClient(
             mongo_uri,
-            serverSelectionTimeoutMS=5000,    # Fail fast if unreachable
+            serverSelectionTimeoutMS=5000,
             connectTimeoutMS=3000,
             maxPoolSize=50
         )
 
-        # Validate connection by pinging server
+        # Ping server — ensures connection is valid
         mongo_client.admin.command("ping")
 
-        # Attach DB reference to the Flask app
+        # Attach DB object to Flask app
         app.db = mongo_client[db_name]
 
         print(f"✔ MongoDB connected → {mongo_uri}/{db_name}")
 
     except mongo_errors.ServerSelectionTimeoutError:
-        msg = "❌ MongoDB connection timeout — check network / cluster status"
-        print(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("❌ MongoDB timeout — cluster not reachable")
 
     except mongo_errors.ConnectionFailure:
-        msg = "❌ MongoDB connection failure — could not connect to server"
-        print(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("❌ MongoDB connection failure")
 
     except Exception as e:
-        print("❌ Unexpected MongoDB Initialization Error:", e)
+        print("❌ Unexpected MongoDB initialization error:", e)
         raise
 
 
-
 # =====================================================================
-# GET DB
+# GET DB (safe inside app context)
 # =====================================================================
 def get_db():
     """
-    Returns the current MongoDB database object.
-    Works inside request context or app context only.
+    Returns the active Mongo DB object.
+    Works ONLY inside Flask request/app context.
     """
 
     try:
         db = getattr(current_app, "db", None)
-        if not db:
-            raise RuntimeError("Database not initialized. Call init_db(app) first.")
+        if db is None:
+            raise RuntimeError("DB not attached to Flask app. Call init_db(app).")
         return db
-    except RuntimeError:
-        # current_app is unavailable (CLI, scripts)
-        raise RuntimeError("No Flask app context available for DB access.")
 
+    except RuntimeError:
+        # This error occurs when current_app is unavailable (CLI, scripts)
+        raise RuntimeError("No Flask app context available — cannot access DB.")
 
 
 # =====================================================================
-# GET COLLECTION
+# GET COLLECTION (used everywhere)
 # =====================================================================
 def get_collection(name):
     """
-    Returns a MongoDB collection safely.
+    Safely returns a collection from the database.
     Example: get_collection("products")
     """
 
     try:
         db = get_db()
         return db[name]
-    except KeyError:
-        print(f"❌ ERROR: Collection '{name}' does not exist in database.")
-        raise
+
     except Exception as e:
-        print(f"❌ ERROR: Failed to access collection '{name}':", e)
+        print(f"❌ ERROR: Cannot access collection '{name}':", e)
         raise
 
 
-
 # =====================================================================
-# BACKWARD COMPATIBILITY
-# Allows legacy syntax: mongo.db.products
+# BACKWARD COMPATIBILITY FOR: mongo.db.collection
 # =====================================================================
-
 class MongoWrapper:
     @property
     def db(self):
-        try:
-            return get_db()
-        except Exception as e:
-            print("❌ ERROR: Legacy mongo.db access failed:", e)
-            raise
+        return get_db()
 
 
 mongo = MongoWrapper()

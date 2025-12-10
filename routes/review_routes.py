@@ -1,60 +1,61 @@
 """
-Production-ready Review Routes
+Production-ready Review Routes (Timeless Threads V2)
 
-Protects against:
-    - Invalid product_id / review_id
-    - Missing form fields
-    - Controller failures
-    - Mongo connection errors
-    - Bad request data
-
-Route paths remain unchanged.
+Safeguards against:
+    - Invalid ObjectId inputs
+    - Missing rating/review text
+    - Unauthorized access handled in controller
+    - Mongo connection problems
+    - Unexpected controller crashes
 """
 
 from flask import Blueprint, request, abort
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from database.connection import mongo
 from controllers.review_controller import ReviewController
 
 
-review_bp = Blueprint("review", __name__)
+review_bp = Blueprint("review", __name__, url_prefix="/review")
 
 
-# ---------------------------------------------------------
-# Safe controller factory
-# ---------------------------------------------------------
-def get_controller():
-    try:
-        return ReviewController(mongo)
-    except Exception as e:
-        print("❌ ReviewController creation failed:", e)
-        abort(500)
-
-
-# ---------------------------------------------------------
-# Helper — Safe ObjectId
-# ---------------------------------------------------------
+# -----------------------------------------------------
+# Helper – Safe ObjectId
+# -----------------------------------------------------
 def safe_oid(value):
     try:
         return ObjectId(value)
-    except bson_errors.InvalidId:
+    except InvalidId:
         return None
     except Exception:
         return None
 
 
-# ---------------------------------------------------------
+# -----------------------------------------------------
+# Safe Controller Factory
+# -----------------------------------------------------
+def get_controller():
+    try:
+        return ReviewController(mongo)
+    except Exception as e:
+        print("❌ ERROR: ReviewController initialization failed:", e)
+        abort(500)
+
+
+# =====================================================================
 # ADD / UPDATE REVIEW
-# URL: POST /review/add-review/<product_id>
-# ---------------------------------------------------------
+# POST /review/add-review/<product_id>
+# =====================================================================
 @review_bp.route("/add-review/<product_id>", methods=["POST"])
 def add_review(product_id):
 
-    # Validate product_id early to avoid unnecessary DB calls
+    # Validate product ID early
     if not safe_oid(product_id):
-        abort(400)   # bad request, not found
+        print("⚠ WARNING: Invalid product_id in add_review:", product_id)
+        abort(400)
 
-    rating = request.form.get("rating")
+    # Extract form data safely
+    rating = request.form.get("rating")  # can be None
     review_text = request.form.get("review", "")
 
     try:
@@ -65,18 +66,24 @@ def add_review(product_id):
             review_text=review_text
         )
     except Exception as e:
-        print("❌ ERROR: add_review failed:", e)
+        print("❌ ERROR: add_review crashed:", e)
         abort(500)
 
 
-# ---------------------------------------------------------
+# =====================================================================
 # DELETE REVIEW
-# URL: POST /review/delete-review/<review_id>/<product_id>
-# ---------------------------------------------------------
+# POST /review/delete-review/<review_id>/<product_id>
+# =====================================================================
 @review_bp.route("/delete-review/<review_id>/<product_id>", methods=["POST"])
 def delete_review(review_id, product_id):
 
-    if not safe_oid(review_id) or not safe_oid(product_id):
+    # Validate IDs early
+    if not safe_oid(review_id):
+        print("⚠ WARNING: Invalid review_id:", review_id)
+        abort(400)
+
+    if not safe_oid(product_id):
+        print("⚠ WARNING: Invalid product_id:", product_id)
         abort(400)
 
     try:
@@ -86,5 +93,5 @@ def delete_review(review_id, product_id):
             product_id=product_id
         )
     except Exception as e:
-        print("❌ ERROR: delete_review failed:", e)
+        print("❌ ERROR: delete_review crashed:", e)
         abort(500)

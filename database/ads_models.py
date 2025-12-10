@@ -1,13 +1,14 @@
 # database/ads_models.py
 
-from bson import ObjectId, errors as bson_errors
 import datetime
+from bson import ObjectId
+from bson.errors import InvalidId
 from database.connection import get_collection
 
 
-# ---------------------------------------------------------
-# SAFE COLLECTION ACCESSORS (lazy-loaded)
-# ---------------------------------------------------------
+# ======================================================================
+# SAFE COLLECTION ACCESSORS (lazy-loaded, production-safe)
+# ======================================================================
 def slots_col():
     try:
         return get_collection("ads_slots")
@@ -15,12 +16,14 @@ def slots_col():
         print("❌ ERROR: Could not load ads_slots collection:", e)
         return None
 
+
 def campaigns_col():
     try:
         return get_collection("ads_campaigns")
     except Exception as e:
         print("❌ ERROR: Could not load ads_campaigns collection:", e)
         return None
+
 
 def impressions_col():
     try:
@@ -30,9 +33,9 @@ def impressions_col():
         return None
 
 
-# ---------------------------------------------------------
+# ======================================================================
 # CREATE SLOT
-# ---------------------------------------------------------
+# ======================================================================
 def create_slot(name, description):
     col = slots_col()
     if not col:
@@ -50,9 +53,9 @@ def create_slot(name, description):
         return None
 
 
-# ---------------------------------------------------------
+# ======================================================================
 # GET SLOT BY NAME
-# ---------------------------------------------------------
+# ======================================================================
 def get_slot(name):
     col = slots_col()
     if not col:
@@ -65,9 +68,9 @@ def get_slot(name):
         return None
 
 
-# ---------------------------------------------------------
+# ======================================================================
 # CREATE CAMPAIGN
-# ---------------------------------------------------------
+# ======================================================================
 def create_campaign(data):
     col = campaigns_col()
     if not col:
@@ -82,9 +85,9 @@ def create_campaign(data):
         return None
 
 
-# ---------------------------------------------------------
+# ======================================================================
 # GET ACTIVE CAMPAIGNS FOR A SLOT
-# ---------------------------------------------------------
+# ======================================================================
 def get_active_campaigns(slot_name):
     col = campaigns_col()
     if not col:
@@ -98,36 +101,36 @@ def get_active_campaigns(slot_name):
             })
         )
     except Exception as e:
-        print(f"⚠ WARNING: Failed to get active campaigns for slot '{slot_name}':", e)
+        print(f"⚠ WARNING: Failed to fetch active campaigns for slot '{slot_name}':", e)
         return []
 
 
-# ---------------------------------------------------------
-# LOG IMPRESSION (SAFE FOR HIGH-TRAFFIC)
-# ---------------------------------------------------------
+# ======================================================================
+# LOG AD IMPRESSION — SAFE FOR RENDER HIGH TRAFFIC
+# ======================================================================
 def log_impression(ad_id, slot_name, ref):
     col = impressions_col()
     if not col:
         print("⚠ WARNING: impressions_col unavailable — impression not logged")
         return
 
-    # Validate ad_id
+    # Validate/adapt ad_id into ObjectId safely
     try:
         oid = ObjectId(ad_id)
-    except bson_errors.InvalidId:
+    except InvalidId:
         print(f"⚠ WARNING: Invalid ad_id '{ad_id}' — impression skipped")
         return
     except Exception as e:
-        print("⚠ WARNING: Failed to build ObjectId for impression:", e)
+        print("⚠ WARNING: Failed to convert ad_id to ObjectId:", e)
         return
 
-    # Attempt to insert impression
+    # Insert impression safely without breaking the app
     try:
         col.insert_one({
             "ad_id": oid,
             "slot": slot_name,
             "timestamp": datetime.datetime.utcnow(),
-            "ref": ref
+            "ref": ref,
         })
     except Exception as e:
         print("⚠ WARNING: Failed to log ad impression:", e)

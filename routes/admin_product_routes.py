@@ -6,7 +6,8 @@ from flask import (
     Blueprint, render_template, request,
     redirect, url_for, flash, current_app, jsonify
 )
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from database.connection import get_collection
 from utils.file_upload import handle_upload
 
@@ -31,7 +32,7 @@ def slugify(name: str) -> str:
 def safe_oid(value):
     try:
         return ObjectId(value)
-    except bson_errors.InvalidId:
+    except InvalidId:
         print(f"⚠ WARNING: Invalid ObjectId: {value}")
         return None
     except Exception as e:

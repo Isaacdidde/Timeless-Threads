@@ -4,7 +4,7 @@ from flask import render_template, abort
 from database.connection import get_collection
 from models.product_model import ProductModel
 
-# Import TT → Dcorp ad fetcher
+# TT → Dcorp ad fetcher
 from utils.ads_client import fetch_ad
 
 
@@ -15,23 +15,21 @@ def register_context_processors(app):
 
     @app.context_processor
     def inject_site_data():
-        """Inject categories + ads into all Jinja templates.
-        Production-safe: no exceptions allowed to bubble up.
-        """
+        """Inject categories + ads into all templates safely."""
 
-        # ---------------------------------------
-        # LOAD CATEGORIES (never allowed to fail)
-        # ---------------------------------------
+        # ---------------------------------------------------
+        # LOAD CATEGORIES (fail-safe)
+        # ---------------------------------------------------
         try:
             cat_col = get_collection("categories")
-            categories = list(cat_col.find().sort("name", 1))
+            categories = list(cat_col.find().sort("name", 1)) if cat_col else []
         except Exception as e:
             print("⚠ WARNING: Failed to load categories:", e)
             categories = []
 
-        # ---------------------------------------
-        # LOAD ADS FROM DCORP 
-        # ---------------------------------------
+        # ---------------------------------------------------
+        # LOAD ADS FROM DCORP (fail-safe per-slot)
+        # ---------------------------------------------------
         ads = {
             "home_banner": None,
             "featured_banner": None,
@@ -42,16 +40,12 @@ def register_context_processors(app):
             "search_banner": None,
         }
 
-        try:
-            # Fetch each slot individually so one failure doesn't kill the rest
-            for slot in ads.keys():
-                try:
-                    ads[slot] = fetch_ad(slot)
-                except Exception as e:
-                    print(f"⚠ WARNING: DCorp ad fetch failed for slot '{slot}':", e)
-                    ads[slot] = None
-        except Exception:
-            pass  # failsafe fallback — do not break templates
+        for slot in ads:
+            try:
+                ads[slot] = fetch_ad(slot)
+            except Exception as e:
+                print(f"⚠ WARNING: Ad fetch failed for slot '{slot}':", e)
+                ads[slot] = None
 
         return dict(
             site_categories=categories,
@@ -60,13 +54,14 @@ def register_context_processors(app):
 
 
 # =====================================================================
-# MAIN CONTROLLER (Homepage, Search, Static Pages)
+# MAIN CONTROLLER – Homepage, Search, Static Pages
 # =====================================================================
 class MainController:
     def __init__(self, mongo):
+        """Initialize safely and avoid truth-value errors."""
         try:
             self.mongo = mongo
-            self.products = ProductModel(mongo)
+            self.products = ProductModel()   # NEW: No mongo argument anymore
         except Exception as e:
             print("❌ ERROR: Failed to initialize ProductModel:", e)
             self.mongo = None
@@ -76,14 +71,16 @@ class MainController:
     # HOMEPAGE
     # ---------------------------------------------------------------
     def home(self):
-        """Load featured + latest products for homepage (production-safe)."""
-
-        if not self.mongo or not self.products:
+        # Safe checks
+        if self.mongo is None or self.products is None:
             abort(500, "Database unavailable")
 
-        # Load featured products
+        # Featured products
         try:
             products_col = get_collection("products")
+            if products_col is None:
+                raise RuntimeError("Products collection unavailable")
+
             featured_products = list(
                 products_col.find({"featured": True}).sort("created_at", -1)
             )
@@ -91,14 +88,14 @@ class MainController:
             print("⚠ WARNING: Failed to load featured products:", e)
             featured_products = []
 
-        # Load latest products
+        # Latest products
         try:
             latest_products = self.products.list_all(limit=8)
         except Exception as e:
             print("⚠ WARNING: Failed to load latest products:", e)
             latest_products = []
 
-        # Render homepage safely
+        # Render
         try:
             return render_template(
                 "index.html",
@@ -111,12 +108,10 @@ class MainController:
             abort(500, "Rendering error")
 
     # ---------------------------------------------------------------
-    # SEARCH
+    # SEARCH PAGE
     # ---------------------------------------------------------------
     def search(self, query):
-        """Handle full text search safely."""
-
-        if not self.products:
+        if self.products is None:
             abort(500, "Database unavailable")
 
         clean_query = (query or "").strip()
@@ -128,18 +123,20 @@ class MainController:
                 results=[]
             )
 
+        # Safe search
         try:
             results = self.products.search(clean_query)
         except Exception as e:
             print("⚠ WARNING: Search failed:", e)
             results = []
 
+        # Render
         try:
             return render_template(
                 "search_results.html",
                 title=f"Search: {clean_query}",
                 query=clean_query,
-                results=results
+                results=results,
             )
         except Exception as e:
             print("❌ ERROR: Failed to render search template:", e)
@@ -152,7 +149,7 @@ class MainController:
         try:
             return render_template("faq.html", title="FAQ")
         except Exception as e:
-            print("❌ ERROR: Failed to render FAQ page:", e)
+            print("❌ ERROR: FAQ rendering failed:", e)
             abort(500, "Rendering error")
 
     # ---------------------------------------------------------------
@@ -162,7 +159,7 @@ class MainController:
         try:
             return render_template("contact.html", title="Contact")
         except Exception as e:
-            print("❌ ERROR: Failed to render Contact page:", e)
+            print("❌ ERROR: Contact page render failed:", e)
             abort(500, "Rendering error")
 
     # ---------------------------------------------------------------
@@ -172,5 +169,5 @@ class MainController:
         try:
             return render_template("policies.html", title="Policies")
         except Exception as e:
-            print("❌ ERROR: Failed to render Policies page:", e)
+            print("❌ ERROR: Policies page render failed:", e)
             abort(500, "Rendering error")

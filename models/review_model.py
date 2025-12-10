@@ -1,5 +1,9 @@
-from bson import ObjectId, errors as bson_errors
+# models/review_model.py
+
+from bson import ObjectId
+from bson.errors import InvalidId
 import datetime
+from database.connection import get_collection
 
 
 class ReviewModel:
@@ -7,7 +11,7 @@ class ReviewModel:
     Production-ready model for interacting with the 'reviews' collection.
 
     Provides:
-        - Review lookup by user + product
+        - Find review by user + product
         - Insert review
         - Update review
         - Delete review
@@ -16,20 +20,20 @@ class ReviewModel:
 
     def __init__(self, mongo):
         try:
-            self.collection = mongo.db.reviews
+            self.col = get_collection("reviews")
         except Exception as e:
             print("❌ ERROR: Cannot access 'reviews' collection:", e)
-            self.collection = None
+            self.col = None
 
     # =====================================================================
     # FIND USER’S EXISTING REVIEW
     # =====================================================================
     def find_user_review(self, product_oid, product_str, username):
-        if not self.collection:
+        if not self.col:
             return None
 
         try:
-            return self.collection.find_one({
+            return self.col.find_one({
                 "$or": [
                     {"product_id": product_oid},
                     {"product_id": product_str}
@@ -44,7 +48,7 @@ class ReviewModel:
     # INSERT REVIEW
     # =====================================================================
     def insert_review(self, product_oid, username, rating, review_text):
-        if not self.collection:
+        if not self.col:
             return None
 
         doc = {
@@ -56,7 +60,7 @@ class ReviewModel:
         }
 
         try:
-            return self.collection.insert_one(doc)
+            return self.col.insert_one(doc)
         except Exception as e:
             print("❌ ERROR: Failed to insert review:", e)
             return None
@@ -65,13 +69,13 @@ class ReviewModel:
     # UPDATE REVIEW
     # =====================================================================
     def update_review(self, review_id, product_oid, rating, review_text):
-        if not self.collection:
+        if not self.col:
             return None
 
         # Validate ObjectId
         try:
             oid = review_id if isinstance(review_id, ObjectId) else ObjectId(review_id)
-        except bson_errors.InvalidId:
+        except InvalidId:
             print(f"⚠ WARNING: Invalid review ID '{review_id}'")
             return None
         except Exception as e:
@@ -86,7 +90,7 @@ class ReviewModel:
         }
 
         try:
-            return self.collection.update_one({"_id": oid}, {"$set": update_doc})
+            return self.col.update_one({"_id": oid}, {"$set": update_doc})
         except Exception as e:
             print(f"❌ ERROR: Failed to update review '{review_id}':", e)
             return None
@@ -95,12 +99,12 @@ class ReviewModel:
     # DELETE REVIEW
     # =====================================================================
     def delete_review(self, review_id):
-        if not self.collection:
+        if not self.col:
             return None
 
         try:
             oid = review_id if isinstance(review_id, ObjectId) else ObjectId(review_id)
-        except bson_errors.InvalidId:
+        except InvalidId:
             print(f"⚠ WARNING: Invalid review ID '{review_id}'")
             return None
         except Exception as e:
@@ -108,20 +112,20 @@ class ReviewModel:
             return None
 
         try:
-            return self.collection.delete_one({"_id": oid})
+            return self.col.delete_one({"_id": oid})
         except Exception as e:
             print(f"⚠ WARNING: Failed to delete review '{review_id}':", e)
             return None
 
     # =====================================================================
-    # GET ALL REVIEWS FOR PRODUCT
+    # GET ALL REVIEWS FOR A PRODUCT
     # =====================================================================
     def get_product_reviews(self, product_oid, product_str):
-        if not self.collection:
+        if not self.col:
             return []
 
         try:
-            return list(self.collection.find({
+            return list(self.col.find({
                 "$or": [
                     {"product_id": product_oid},
                     {"product_id": product_str}

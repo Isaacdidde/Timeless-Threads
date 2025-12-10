@@ -1,48 +1,53 @@
 from flask import render_template, flash, redirect, url_for, abort
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 from models.product_model import ProductModel
 
-# 🔥 AD SYSTEM
+# Ads + DB helpers
 from api.ads.loader import load_ads_for_slots
 from database.connection import get_collection
 
 
 class ProductController:
-    def __init__(self, mongo):
+    def __init__(self):
+        # ProductModel no longer takes mongo because DB access is global
         try:
-            self.mongo = mongo
-            self.products = ProductModel(mongo)
+            self.products = ProductModel()
         except Exception as e:
             print("❌ ERROR: Failed to initialize ProductModel:", e)
-            self.mongo = None
             self.products = None
 
     # ==================================================================
     # PRODUCT DETAIL PAGE (Production-Hardened)
     # ==================================================================
     def product_detail(self, product_id, normalize_cart_func):
-        # Normalize cart session safely
+
+        # SAFELY normalize cart
         try:
             normalize_cart_func()
         except Exception as e:
             print("⚠ WARNING: normalize_cart_func failed:", e)
 
         # ---------------------------------------------------------------
-        # Validate / Fetch Product
-        # ---------------------------------------------------------------
-        if not self.mongo:
-            abort(500, "Database unavailable")
-
         # Validate ObjectId
+        # ---------------------------------------------------------------
         try:
             oid = ObjectId(product_id)
-        except bson_errors.InvalidId:
+        except InvalidId:
             flash("Invalid product ID.", "danger")
             return redirect(url_for("main.home"))
 
-        # DB lookup
+        # ---------------------------------------------------------------
+        # Fetch Product
+        # ---------------------------------------------------------------
         try:
-            product = self.mongo.db.products.find_one({"_id": oid})
+            products_col = get_collection("products")
+        except Exception as e:
+            print("❌ ERROR: Cannot access products collection:", e)
+            abort(500, "Database unavailable")
+
+        try:
+            product = products_col.find_one({"_id": oid})
         except Exception as e:
             print("❌ ERROR: Product lookup failed:", e)
             flash("Unable to load product.", "danger")
@@ -64,7 +69,7 @@ class ProductController:
 
         images = []
 
-        # A) list field
+        # List field
         raw_imgs = product.get("images") or []
         if isinstance(raw_imgs, list):
             for it in raw_imgs:
@@ -72,13 +77,12 @@ class ProductController:
                 if fname and fname not in images:
                     images.append(fname)
 
-        # B) single fields
+        # Single-image fields
         for field in ["primary_image", "image", "image2", "image3"]:
             fname = normalize_filename(product.get(field))
             if fname and fname not in images:
                 images.append(fname)
 
-        # C) fallback
         if not images:
             images = ["no_image.jpg"]
 
@@ -121,7 +125,6 @@ class ProductController:
                 print("⚠ WARNING: Could not fetch reviews:", e)
                 reviews = []
 
-        # Rating summary
         if reviews:
             try:
                 total = sum(int(r.get("rating", 0)) for r in reviews)
@@ -132,7 +135,7 @@ class ProductController:
                 review_count = len(reviews)
 
         # ---------------------------------------------------------------
-        # LOAD ADS (Fault-Tolerant)
+        # LOAD ADS
         # ---------------------------------------------------------------
         try:
             ads = load_ads_for_slots([
@@ -144,7 +147,7 @@ class ProductController:
             ads = {}
 
         # ---------------------------------------------------------------
-        # RENDER PAGE (Safe)
+        # RENDER PAGE
         # ---------------------------------------------------------------
         try:
             return render_template(
@@ -161,9 +164,10 @@ class ProductController:
             abort(500, "Rendering error")
 
     # ==================================================================
-    # CATEGORY VIEW (Same Logic, Production Safety Added)
+    # CATEGORY VIEW
     # ==================================================================
     def category_view(self, category_name, normalize_cart_func):
+
         try:
             normalize_cart_func()
         except Exception as e:
@@ -172,24 +176,24 @@ class ProductController:
         if not self.products:
             abort(500, "Database unavailable")
 
-        # Load products safely
+        # Fetch products in category
         try:
             products = self.products.get_by_category(category_name)
         except Exception as e:
             print("⚠ WARNING: Failed to fetch category products:", e)
             products = []
 
-        # Load ads safely
+        # Load ads
         try:
             ads = load_ads_for_slots([
                 "card_small",
-                "product_inline"
+                "product_inline",
             ])
         except Exception as e:
             print("⚠ WARNING: Failed to load category ads:", e)
             ads = {}
 
-        # Safe render
+        # Render
         try:
             return render_template(
                 "category.html",

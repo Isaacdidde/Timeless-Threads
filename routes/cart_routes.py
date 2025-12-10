@@ -1,45 +1,55 @@
 """
 Production-ready Cart Routes
-Safe against:
+
+Hardened against:
     - Missing form data
     - Invalid product IDs
-    - Controller exceptions
-    - Session errors
-    - Unexpected crashes (returns safe redirects)
+    - Controller initialization errors
+    - Mongo truth-value errors
+    - Session failures
+    - Unexpected crashes
 
-Does not modify route paths or controller logic.
+Route paths and controller APIs remain unchanged.
 """
 
 from flask import Blueprint, request, flash, redirect, url_for
-from controllers.cart_controller import CartController
 
-cart_bp = Blueprint("cart", __name__, url_prefix="/cart")
-
-# Global controller instance
+# Try to load real controller
 try:
+    from controllers.cart_controller import CartController
     controller = CartController()
 except Exception as e:
     print("❌ ERROR: Failed to initialize CartController:", e)
 
-    # fallback dummy prevents server crash
+    # Fallback dummy controller (prevents app crash)
     class CartController:
-        def view_cart(self): 
-            flash("Cart unavailable.", "danger")
+        def view_cart(self):
+            flash("Cart temporarily unavailable.", "danger")
             return redirect(url_for("main.home"))
-        def add_to_cart(self, *a, **k):
-            flash("Cannot add to cart.", "danger")
+
+        def add_to_cart(self, *args, **kwargs):
+            flash("Unable to add items to cart.", "danger")
             return redirect(url_for("main.home"))
-        def update_quantity(self, *a, **k):
-            flash("Cannot update cart.", "danger")
+
+        def update_quantity(self, *args, **kwargs):
+            flash("Unable to update cart.", "danger")
             return redirect(url_for("main.home"))
-        def remove_from_cart(self, *a, **k):
-            flash("Cannot remove from cart.", "danger")
+
+        def remove_from_cart(self, *args, **kwargs):
+            flash("Unable to remove items from cart.", "danger")
             return redirect(url_for("main.home"))
+
         def checkout_page(self):
-            flash("Checkout unavailable.", "danger")
+            flash("Checkout is unavailable.", "danger")
             return redirect(url_for("main.home"))
 
     controller = CartController()
+
+
+# ======================================================
+# BLUEPRINT
+# ======================================================
+cart_bp = Blueprint("cart", __name__, url_prefix="/cart")
 
 
 # ======================================================
@@ -61,11 +71,12 @@ def view_cart():
 @cart_bp.route("/add/<product_id>", methods=["POST"])
 def add_to_cart(product_id):
     try:
-        if not product_id:
+        if not product_id or str(product_id).strip() == "":
             flash("Invalid product.", "danger")
             return redirect(url_for("cart.view_cart"))
 
-        form = request.form or {}
+        form = request.form.to_dict() if request.form else {}
+
         return controller.add_to_cart(product_id, form)
 
     except Exception as e:
@@ -80,9 +91,10 @@ def add_to_cart(product_id):
 @cart_bp.route("/update", methods=["POST"])
 def update_quantity():
     try:
-        form = request.form or {}
+        form = request.form.to_dict() if request.form else {}
 
-        if not form.get("product_id"):
+        product_id = form.get("product_id")
+        if not product_id:
             flash("Invalid product update.", "warning")
             return redirect(url_for("cart.view_cart"))
 
@@ -100,9 +112,10 @@ def update_quantity():
 @cart_bp.route("/remove", methods=["POST"])
 def remove_from_cart():
     try:
-        form = request.form or {}
+        form = request.form.to_dict() if request.form else {}
 
-        if not form.get("product_id"):
+        product_id = form.get("product_id")
+        if not product_id:
             flash("Invalid remove request.", "warning")
             return redirect(url_for("cart.view_cart"))
 

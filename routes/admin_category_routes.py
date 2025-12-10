@@ -1,41 +1,61 @@
+# routes/admin_category_routes.py
+
 from flask import (
     Blueprint, render_template, request,
     redirect, url_for, flash
 )
 from utils.auth_decorators import admin_required
 from database.connection import get_collection
-from bson import ObjectId, errors as bson_errors
-import os
+from bson import ObjectId
+from bson.errors import InvalidId
 from werkzeug.utils import secure_filename
+import os
 
-admin_category_bp = Blueprint("admin_category", __name__, url_prefix="/admin/categories")
 
-# Image upload folder
+# ---------------------------------------------------------
+# BLUEPRINT SETUP
+# ---------------------------------------------------------
+admin_category_bp = Blueprint(
+    "admin_category",
+    __name__,
+    url_prefix="/admin/categories"
+)
+
+
+# ---------------------------------------------------------
+# FILE UPLOAD PATH
+# ---------------------------------------------------------
 UPLOAD_FOLDER = "static/uploads/categories"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # ---------------------------------------------------------
-# HELPER: SAFE SLUG CREATOR
+# SAFE SLUG GENERATOR
 # ---------------------------------------------------------
-def generate_slug(name):
+def generate_slug(name: str):
     try:
-        return name.lower().strip().replace(" ", "-")
+        slug = (
+            name.lower()
+            .strip()
+            .replace(" ", "-")
+            .replace("/", "-")
+        )
+        return slug
     except Exception:
         return None
 
 
 # ---------------------------------------------------------
-# HELPER: SAFE OBJECT ID
+# SAFE OBJECTID PARSER
 # ---------------------------------------------------------
-def safe_object_id(value):
+def safe_oid(value):
     try:
         return ObjectId(value)
-    except bson_errors.InvalidId:
-        print(f"⚠ WARNING: Invalid ObjectId: {value}")
+    except InvalidId:
+        print(f"⚠ WARNING: Invalid ObjectId → {value}")
         return None
     except Exception as e:
-        print(f"⚠ WARNING: ObjectId parse error: {e}")
+        print("⚠ WARNING: ObjectId parse error:", e)
         return None
 
 
@@ -46,7 +66,7 @@ def safe_object_id(value):
 @admin_required
 def list_categories():
     try:
-        categories = list(get_collection("categories").find())
+        categories = list(get_collection("categories").find().sort("name", 1))
     except Exception as e:
         print("⚠ WARNING: Failed to fetch categories:", e)
         categories = []
@@ -62,33 +82,41 @@ def list_categories():
 def add_category():
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        slug = generate_slug(name)
+        name = (request.form.get("name") or "").strip()
 
         if not name:
             flash("Category name is required.", "danger")
             return redirect(url_for("admin_category.add_category"))
 
+        slug = generate_slug(name)
+
+        # Prevent duplicate slugs
+        col = get_collection("categories")
+        if col.find_one({"slug": slug}):
+            flash("Category already exists!", "danger")
+            return redirect(url_for("admin_category.add_category"))
+
+        # Image upload (optional)
         image_filename = None
         image_file = request.files.get("image")
 
-        # Image upload with safety
         if image_file and image_file.filename:
             try:
                 image_filename = secure_filename(image_file.filename)
                 image_path = os.path.join(UPLOAD_FOLDER, image_filename)
                 image_file.save(image_path)
             except Exception as e:
-                print("⚠ WARNING: Category image upload failed:", e)
+                print("⚠ WARNING: Image upload failed:", e)
                 flash("Image upload failed.", "warning")
 
+        # Insert category
         try:
-            get_collection("categories").insert_one({
+            col.insert_one({
                 "name": name,
                 "slug": slug,
                 "image": image_filename
             })
-            flash("Category created successfully!", "success")
+            flash("Category added successfully!", "success")
         except Exception as e:
             print("❌ ERROR: Failed to insert category:", e)
             flash("Failed to create category.", "danger")
@@ -106,7 +134,7 @@ def add_category():
 def edit_category(id):
 
     col = get_collection("categories")
-    oid = safe_object_id(id)
+    oid = safe_oid(id)
 
     if not oid:
         flash("Invalid category ID.", "danger")
@@ -115,7 +143,7 @@ def edit_category(id):
     try:
         category = col.find_one({"_id": oid})
     except Exception as e:
-        print("❌ ERROR: Failed to fetch category:", e)
+        print("❌ ERROR: Failed to load category:", e)
         category = None
 
     if not category:
@@ -123,24 +151,25 @@ def edit_category(id):
         return redirect(url_for("admin_category.list_categories"))
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        slug = generate_slug(name)
+        name = (request.form.get("name") or "").strip()
 
         if not name:
             flash("Category name is required.", "danger")
             return redirect(url_for("admin_category.edit_category", id=id))
 
+        slug = generate_slug(name)
+
+        # Optional image replacement
         image_file = request.files.get("image")
         current_image = category.get("image")
 
-        # Replace image if new file given
         if image_file and image_file.filename:
             try:
                 new_filename = secure_filename(image_file.filename)
                 new_path = os.path.join(UPLOAD_FOLDER, new_filename)
                 image_file.save(new_path)
 
-                # delete old file safely
+                # Remove old image safely
                 if current_image:
                     old_path = os.path.join(UPLOAD_FOLDER, current_image)
                     if os.path.exists(old_path):
@@ -149,10 +178,10 @@ def edit_category(id):
                 current_image = new_filename
 
             except Exception as e:
-                print("⚠ WARNING: Failed saving replacement category image:", e)
-                flash("Image upload error.", "warning")
+                print("⚠ WARNING: Failed saving new category image:", e)
+                flash("Image upload failed.", "warning")
 
-        # Update DB record safely
+        # Update category document
         try:
             col.update_one(
                 {"_id": oid},
@@ -163,7 +192,6 @@ def edit_category(id):
                 }}
             )
             flash("Category updated successfully!", "success")
-
         except Exception as e:
             print("❌ ERROR: Failed to update category:", e)
             flash("Error updating category.", "danger")
@@ -181,34 +209,36 @@ def edit_category(id):
 def delete_category(id):
 
     col = get_collection("categories")
-    oid = safe_object_id(id)
+    oid = safe_oid(id)
 
     if not oid:
         flash("Invalid category ID.", "danger")
         return redirect(url_for("admin_category.list_categories"))
 
+    # Load category before deleting
     try:
         category = col.find_one({"_id": oid})
     except Exception as e:
-        print("⚠ WARNING: Could not load category for delete:", e)
+        print("⚠ WARNING: Failed to load category:", e)
         category = None
 
+    # Delete image safely
     if category:
-        # Remove image file safely
         try:
-            img_filename = category.get("image")
-            if img_filename:
-                img_path = os.path.join(UPLOAD_FOLDER, img_filename)
-                if os.path.exists(img_path):
-                    os.remove(img_path)
+            filename = category.get("image")
+            if filename:
+                path = os.path.join(UPLOAD_FOLDER, filename)
+                if os.path.exists(path):
+                    os.remove(path)
         except Exception as e:
-            print("⚠ WARNING: Failed to delete category image:", e)
+            print("⚠ WARNING: Failed to delete image:", e)
 
-        # Delete category record
-        try:
-            col.delete_one({"_id": oid})
-        except Exception as e:
-            print("❌ ERROR: Failed to delete category from DB:", e)
+    # Delete DB record
+    try:
+        col.delete_one({"_id": oid})
+        flash("Category deleted successfully!", "success")
+    except Exception as e:
+        print("❌ ERROR: Failed to delete category:", e)
+        flash("Failed to delete category.", "danger")
 
-    flash("Category deleted successfully!", "success")
     return redirect(url_for("admin_category.list_categories"))

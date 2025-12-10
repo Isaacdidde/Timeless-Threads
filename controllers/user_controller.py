@@ -1,6 +1,7 @@
 from flask import render_template, session, redirect, url_for, flash
 from werkzeug.security import check_password_hash, generate_password_hash
-from bson import ObjectId, errors as bson_errors
+from bson import ObjectId
+from bson.errors import InvalidId
 import os
 from database.connection import get_collection
 
@@ -29,7 +30,7 @@ class UserController:
         # Load user safely
         try:
             user = self.users.find_one({"_id": ObjectId(user_id)})
-        except bson_errors.InvalidId:
+        except InvalidId:
             flash("Invalid user ID.", "danger")
             return redirect(url_for("auth.login"))
         except Exception as e:
