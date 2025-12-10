@@ -5,13 +5,9 @@ Hardened against:
     - Invalid product/category slugs
     - Bad ObjectId values
     - Missing Mongo collections
-    - Product/Category not found errors
-    - Ads service failures
-    - Broken image arrays
+    - Image normalization issues
     - Price calculation errors
-    - Review aggregation failures
-
-Template behavior remains unchanged.
+    - Review aggregation issues
 """
 
 from flask import Blueprint, render_template, abort, request
@@ -22,10 +18,9 @@ from api.ads.loader import load_ads_for_slots
 
 product_bp = Blueprint("product", __name__, url_prefix="")
 
-
-# ----------------------------------------------------------------------
+# ======================================================================
 # SAFE OBJECTID PARSER
-# ----------------------------------------------------------------------
+# ======================================================================
 def safe_oid(value):
     try:
         return ObjectId(value)
@@ -36,113 +31,56 @@ def safe_oid(value):
 
 
 # ======================================================================
-# CATEGORY PAGE
-# ======================================================================
-@product_bp.route("/category/<slug_or_id>")
-def category_page(slug_or_id):
-
-    try:
-        categories = get_collection("categories")
-        products = get_collection("products")
-    except Exception as e:
-        print("❌ ERROR: Collections unavailable:", e)
-        abort(500)
-
-    category = None
-
-    # First try slug
-    try:
-        category = categories.find_one({"slug": slug_or_id})
-    except Exception as e:
-        print("⚠ WARNING: slug category lookup failed:", e)
-
-    # Fallback ObjectId
-    if not category:
-        oid = safe_oid(slug_or_id)
-        if oid:
-            try:
-                category = categories.find_one({"_id": oid})
-            except Exception as e:
-                print("⚠ WARNING: category ObjectId lookup failed:", e)
-
-    if not category:
-        abort(404)
-
-    # Fetch products in this category
-    try:
-        items = list(
-            products.find({"category_id": str(category["_id"])}).sort("created_at", -1)
-        )
-    except Exception as e:
-        print("⚠ WARNING: product lookup failed:", e)
-        items = []
-
-    # Load ads safely
-    try:
-        ads = load_ads_for_slots(["card_small", "product_inline"])
-    except Exception as e:
-        print("⚠ WARNING: Ad loader error:", e)
-        ads = {}
-
-    return render_template(
-        "category.html",
-        category=category,
-        products=items,
-        ads=ads
-    )
-
-
-# ======================================================================
 # PRODUCT DETAIL PAGE
 # ======================================================================
 @product_bp.route("/product/<slug_or_id>")
 def product_detail(slug_or_id):
 
+    # Load collections
     try:
         products_col = get_collection("products")
         reviews_col = get_collection("reviews")
     except Exception as e:
-        print("❌ ERROR: Cannot load Mongo collections:", e)
+        print("❌ ERROR: Cannot load collections:", e)
         abort(500)
 
     product = None
 
-    # By slug
+    # Prefer slug lookup
     try:
         product = products_col.find_one({"slug": slug_or_id})
     except Exception as e:
-        print("⚠ WARNING: product slug lookup failed:", e)
+        print("⚠ WARNING: slug product lookup failed:", e)
 
-    # By ObjectId
+    # Fallback ObjectId
     if not product:
         oid = safe_oid(slug_or_id)
         if oid:
             try:
                 product = products_col.find_one({"_id": oid})
             except Exception as e:
-                print("⚠ WARNING: product ObjectId lookup failed:", e)
+                print("⚠ WARNING: ObjectId product lookup failed:", e)
 
     if not product:
         abort(404)
 
-    # ---------------------------------------------------------
-    # CLEAN IMAGES
-    # ---------------------------------------------------------
+    # Normalize images
     def clean(v):
         if not v or not isinstance(v, str):
             return None
         v = v.replace("\\", "/").strip()
         return v.split("/")[-1]
 
-    images = []
     try:
+        images = []
         raw = product.get("images") or []
+
         for im in raw:
             fn = clean(im)
             if fn and fn not in images:
                 images.append(fn)
 
-        # ensure single-image fields don't get lost
+        # ensure extra fields don't get lost
         for f in ["primary_image", "image", "image2", "image3"]:
             fn = clean(product.get(f))
             if fn and fn not in images:
@@ -157,9 +95,7 @@ def product_detail(slug_or_id):
         print("⚠ WARNING: image normalization failed:", e)
         product["__images"] = ["no_image.jpg"]
 
-    # ---------------------------------------------------------
-    # PRICING CALCULATION
-    # ---------------------------------------------------------
+    # Pricing calculations
     mrp = None
     try:
         if product.get("discount"):
@@ -167,9 +103,7 @@ def product_detail(slug_or_id):
     except Exception:
         mrp = None
 
-    # ---------------------------------------------------------
-    # LOAD REVIEWS
-    # ---------------------------------------------------------
+    # Load reviews
     reviews = []
     avg_rating = None
 
@@ -178,12 +112,9 @@ def product_detail(slug_or_id):
         pid_str = str(pid)
 
         reviews = list(
-            reviews_col.find({
-                "$or": [
-                    {"product_id": pid},
-                    {"product_id": pid_str}
-                ]
-            }).sort("created_at", -1)
+            reviews_col
+            .find({"$or": [{"product_id": pid}, {"product_id": pid_str}]})
+            .sort("created_at", -1)
         )
 
         if reviews:
@@ -193,9 +124,7 @@ def product_detail(slug_or_id):
     except Exception as e:
         print("⚠ WARNING: failed loading reviews:", e)
 
-    # ---------------------------------------------------------
-    # LOAD ADS
-    # ---------------------------------------------------------
+    # Load ads
     try:
         ads = load_ads_for_slots([
             "product_detail_banner",
@@ -206,9 +135,6 @@ def product_detail(slug_or_id):
         print("⚠ WARNING: ad loading failed:", e)
         ads = {}
 
-    # ---------------------------------------------------------
-    # RENDER TEMPLATE
-    # ---------------------------------------------------------
     return render_template(
         "product_detail.html",
         product=product,
@@ -226,8 +152,7 @@ def product_detail(slug_or_id):
 @product_bp.route("/search")
 def search_page():
 
-    q = request.args.get("q", "")
-    q = q.strip() if isinstance(q, str) else ""
+    q = request.args.get("q", "").strip()
 
     try:
         prod_col = get_collection("products")
@@ -239,9 +164,8 @@ def search_page():
     if q and prod_col:
         try:
             results = list(
-                prod_col.find({
-                    "name": {"$regex": q, "$options": "i"}
-                }).limit(50)
+                prod_col.find({"name": {"$regex": q, "$options": "i"}})
+                .limit(50)
             )
         except Exception as e:
             print("⚠ WARNING: search query failed:", e)

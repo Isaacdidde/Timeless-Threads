@@ -146,63 +146,112 @@ document.addEventListener("DOMContentLoaded", () => {
     // ======================================================
     // 6. PRODUCT CARD SLIDESHOW (Category/List Pages)
     // ======================================================
-    (() => {
-        const cardContainers = document.querySelectorAll(".product-img-container");
-        if (!cardContainers.length) return;
+    // --- Robust Product Card Slideshow (replace existing block) ---
+(() => {
+    const cardContainers = document.querySelectorAll(".product-img-container");
+    if (!cardContainers || cardContainers.length === 0) {
+        console.debug("Slideshow: no .product-img-container on page.");
+        return;
+    }
 
-        cardContainers.forEach(container => {
+    // helper: normalize image -> full url
+    const normalize = (imgStr) => {
+        if (!imgStr) return null;
+        // already an absolute or root-relative URL?
+        if (/^(https?:)?\/\//i.test(imgStr) || /^\//.test(imgStr)) {
+            return imgStr;
+        }
+        // filename only -> assume products folder
+        return `/static/uploads/products/${imgStr}`;
+    };
 
-            let images, img, prev, next;
+    cardContainers.forEach((container, idx) => {
+        let raw = container.dataset.images;
+        if (!raw) {
+            console.warn(`Slideshow[${idx}]: missing data-images on container`, container);
+            return;
+        }
 
-            try {
-                images = JSON.parse(container.dataset.images);
-            } catch {
-                return; // skip container with invalid data
-            }
+        let images;
+        try {
+            images = JSON.parse(raw);
+        } catch (err) {
+            console.error(`Slideshow[${idx}]: data-images JSON parse failed`, err, "raw:", raw);
+            return;
+        }
 
-            img = container.querySelector(".product-img-slide");
-            prev = container.querySelector(".prod-prev");
-            next = container.querySelector(".prod-next");
+        // normalize image paths
+        images = images.map(normalize).filter(Boolean);
+        if (!images.length) {
+            console.warn(`Slideshow[${idx}]: no usable images after normalization`, images);
+            return;
+        }
 
-            if (!img || !images.length) return;
+        const imgEl = container.querySelector(".product-img-slide");
+        if (!imgEl) {
+            console.error(`Slideshow[${idx}]: .product-img-slide not found inside container`, container);
+            return;
+        }
 
-            let index = 0;
-            let interval = null;
+        const prevBtn = container.querySelector(".prod-prev");
+        const nextBtn = container.querySelector(".prod-next");
 
-            const updateImage = () => smoothUpdateImage(img, images[index]);
+        // ensure buttons are visible/clickable
+        if (prevBtn) prevBtn.style.cursor = "pointer";
+        if (nextBtn) nextBtn.style.cursor = "pointer";
 
-            const startAuto = () => {
-                stopAuto();
-                interval = setInterval(() => {
-                    index = (index + 1) % images.length;
-                    updateImage();
-                }, 1200 + Math.random() * 1500);
-            };
+        let index = 0;
+        let intervalId = null;
 
-            const stopAuto = () => interval && clearInterval(interval);
+        const setImage = (i) => {
+            index = ((i % images.length) + images.length) % images.length;
+            // smooth swap
+            imgEl.style.transition = "opacity 180ms linear";
+            imgEl.style.opacity = 0;
+            setTimeout(() => {
+                // set src and ensure it's a full url
+                imgEl.src = images[index];
+                imgEl.style.opacity = 1;
+            }, 190);
+        };
 
-            container.addEventListener("mouseenter", startAuto);
-            container.addEventListener("mouseleave", () => {
-                stopAuto();
-                index = 0;
-                updateImage();
-            });
-
-            prev?.addEventListener("click", e => {
-                e.preventDefault();
-                stopAuto();
-                index = (index - 1 + images.length) % images.length;
-                updateImage();
-            });
-
-            next?.addEventListener("click", e => {
-                e.preventDefault();
-                stopAuto();
+        // auto-rotate with random slight variance to avoid sync
+        const startAuto = () => {
+            stopAuto();
+            intervalId = setInterval(() => {
                 index = (index + 1) % images.length;
-                updateImage();
+                setImage(index);
+            }, 1800 + Math.round(Math.random() * 1000));
+        };
+        const stopAuto = () => {
+            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+        };
+
+        // events
+        if (prevBtn) {
+            prevBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                stopAuto();
+                setImage(index - 1);
             });
-        });
-    })();
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                stopAuto();
+                setImage(index + 1);
+            });
+        }
+
+        // hover starts auto, leaving resets to first image
+        container.addEventListener("mouseenter", startAuto);
+        container.addEventListener("mouseleave", () => { stopAuto(); setImage(0); });
+
+        // initial render
+        setImage(0);
+    });
+})();
+
 
 
     // ======================================================

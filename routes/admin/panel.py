@@ -29,7 +29,7 @@ def dashboard():
     # SAFE COUNT FUNCTION
     # -------------------------------------------------------------------
     def safe_count(col, query=None):
-        if not col:
+        if col is None:
             return 0
         try:
             return col.count_documents(query or {})
@@ -61,7 +61,7 @@ def dashboard():
     slot_names = []
     slot_clicks = []
 
-    if clicks_col:
+    if clicks_col is not None:
         try:
             slot_data = clicks_col.aggregate([
                 {"$group": {"_id": "$slot", "count": {"$sum": 1}}},
@@ -82,7 +82,7 @@ def dashboard():
     users_days = []
     users_counts = []
 
-    if users_col:
+    if users_col is not None:
         try:
             last7 = datetime.now() - timedelta(days=7)
 

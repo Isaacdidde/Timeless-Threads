@@ -21,11 +21,15 @@ def register_context_processors(app):
         # LOAD CATEGORIES (fail-safe)
         # ---------------------------------------------------
         try:
-            cat_col = get_collection("categories")
-            categories = list(cat_col.find().sort("name", 1)) if cat_col else []
+           cat_col = get_collection("categories")
+           if cat_col is not None:
+                categories = list(cat_col.find().sort("name", 1))
+           else:
+                categories = []
         except Exception as e:
-            print("⚠ WARNING: Failed to load categories:", e)
-            categories = []
+           print("⚠ WARNING: Failed to load categories:", e)
+           categories = []
+
 
         # ---------------------------------------------------
         # LOAD ADS FROM DCORP (fail-safe per-slot)

@@ -126,7 +126,7 @@
                                         {% for cat in items %}
                                             <li>
                                                 <a class="mega-link"
-                                                   href="{{ url_for('product.category_page', category_slug=cat.slug) }}">
+                                                   href="{{ url_for('category.show_category', slug_or_id=cat.slug) }}">
                                                     {{ cat.name }}
                                                 </a>
                                             </li>
@@ -251,7 +251,7 @@
                 <ul class="footer-links">
                     {% for cat in site_categories %}
                     <li>
-                        <a href="{{ url_for('product.category_page', category_slug=cat.slug) }}">
+                        <a href="{{ url_for('category.show_category', slug_or_id=cat.slug) }}">
                             {{ cat.name }}
                         </a>
                     </li>

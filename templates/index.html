@@ -30,7 +30,7 @@
   {% for cat in site_categories %}
   <div class="col-6 col-md-3">
 
-    <a href="{{ url_for('product.category_page', category_slug=cat.slug) }}"
+    <a href="{{ url_for('category.show_category', slug_or_id=cat.slug) }}"
        class="text-decoration-none d-block">
 
       <div class="card product-card overflow-hidden shadow-sm h-100">

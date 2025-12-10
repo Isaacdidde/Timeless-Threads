@@ -7,7 +7,7 @@ Handles:
     - Invalid ObjectIds
     - Query failures
     - Unknown categories (clean 404)
-    
+
 Compatible with:
     - category.slug
     - category._id (fallback)
@@ -19,6 +19,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from database.connection import get_collection
 
+# 🔥 This is the ONLY category route prefix
 category_bp = Blueprint("category", __name__, url_prefix="/category")
 
 
@@ -26,7 +27,7 @@ category_bp = Blueprint("category", __name__, url_prefix="/category")
 # SAFE OBJECTID PARSER
 # ----------------------------------------------------------------------
 def safe_oid(value):
-    """Return ObjectId or None without raising exceptions."""
+    """Safely returns ObjectId or None."""
     try:
         return ObjectId(value)
     except InvalidId:
@@ -36,34 +37,34 @@ def safe_oid(value):
 
 
 # ----------------------------------------------------------------------
-# CATEGORY PAGE (slug OR ObjectId)
+# CATEGORY PAGE — official endpoint = category.show_category
 # ----------------------------------------------------------------------
 @category_bp.route("/<slug_or_id>")
 def show_category(slug_or_id):
 
-    # ------------------------------------------------------
-    # Load DB collections safely
-    # ------------------------------------------------------
+    # ---------------------------
+    # Load Mongo collections
+    # ---------------------------
     try:
         cat_col = get_collection("categories")
         prod_col = get_collection("products")
     except Exception as e:
-        print("❌ ERROR: Failed to load collections:", e)
+        print("❌ ERROR: Failed to load Mongo collections:", e)
         abort(500)
 
     category = None
 
-    # ------------------------------------------------------
-    # 1. Try to match category by slug
-    # ------------------------------------------------------
+    # ---------------------------
+    # Lookup category by slug
+    # ---------------------------
     try:
         category = cat_col.find_one({"slug": slug_or_id})
     except Exception as e:
         print("⚠ WARNING: Category slug lookup failed:", e)
 
-    # ------------------------------------------------------
-    # 2. Fallback → try ObjectId
-    # ------------------------------------------------------
+    # ---------------------------
+    # Fallback: lookup by ObjectId
+    # ---------------------------
     if not category:
         oid = safe_oid(slug_or_id)
         if oid:
@@ -72,15 +73,15 @@ def show_category(slug_or_id):
             except Exception as e:
                 print("⚠ WARNING: Category ObjectId lookup failed:", e)
 
-    # ------------------------------------------------------
-    # 3. If still not found → clean 404
-    # ------------------------------------------------------
+    # ---------------------------
+    # If not found → 404
+    # ---------------------------
     if not category:
         abort(404)
 
-    # ------------------------------------------------------
-    # 4. Fetch products in this category
-    # ------------------------------------------------------
+    # ---------------------------
+    # Load products for this category
+    # ---------------------------
     products = []
     try:
         products = list(
@@ -89,11 +90,11 @@ def show_category(slug_or_id):
             .sort("created_at", -1)
         )
     except Exception as e:
-        print(f"⚠ WARNING: Product query failed for category '{slug_or_id}':", e)
+        print(f"⚠ WARNING: Failed fetching products for category '{slug_or_id}':", e)
 
-    # ------------------------------------------------------
-    # 5. Render page safely
-    # ------------------------------------------------------
+    # ---------------------------
+    # Render template safely
+    # ---------------------------
     try:
         return render_template(
             "category.html",

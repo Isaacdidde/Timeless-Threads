@@ -176,9 +176,6 @@ def add_product():
             "sizes": sizes,
             "colors": colors,
 
-            "details": [],
-            "deleted_details": [],
-
             "images": uploaded,
             "primary_image": primary,
             "image": img,
