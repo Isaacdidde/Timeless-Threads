@@ -35,7 +35,7 @@ class AuthController:
             return redirect(url_for("auth.login"))
 
         # Model availability check
-        if not self.users:
+        if self.users is None:
             flash("Internal error. Please try again later.", "danger")
             return redirect(url_for("auth.login"))
 
@@ -87,7 +87,7 @@ class AuthController:
     # SIGNUP (Create User)
     # ===============================================================
     def signup(self, name, email, mobile, age, password):
-        if not self.users:
+        if self.users is None:
             flash("Internal error. Try again later.", "danger")
             return redirect(url_for("auth.signup"))
 

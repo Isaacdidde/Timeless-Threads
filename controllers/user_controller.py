@@ -23,7 +23,7 @@ class UserController:
             flash("Please login first.", "warning")
             return redirect(url_for("auth.login"))
 
-        if not self.users:
+        if self.users is None:
             flash("User system unavailable.", "danger")
             return redirect(url_for("auth.login"))
 
@@ -48,7 +48,7 @@ class UserController:
         if not user_id:
             return redirect(url_for("auth.login"))
 
-        if not self.users:
+        if self.users is None:
             flash("Profile system unavailable.", "danger")
             return redirect(url_for("user.profile_page"))
 
@@ -103,7 +103,7 @@ class UserController:
         if not user_id:
             return redirect(url_for("auth.login"))
 
-        if not self.users:
+        if self.users is None:
             flash("Password system unavailable.", "danger")
             return redirect(url_for("user.profile_page"))
 
@@ -162,7 +162,7 @@ class UserController:
         if not user_id:
             return redirect(url_for("auth.login"))
 
-        if not self.users:
+        if self.users is None:
             flash("Address system unavailable.", "danger")
             return redirect(url_for("user.profile_page"))
 
@@ -197,7 +197,7 @@ class UserController:
         if not user_id:
             return redirect(url_for("auth.login"))
 
-        if not self.users:
+        if self.users is None:
             flash("Address system unavailable.", "danger")
             return redirect(url_for("user.profile_page"))
 

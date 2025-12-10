@@ -31,7 +31,7 @@ class AdminAuthController:
     # HANDLE LOGIN FORM (Production-ready)
     # -------------------------------------------------
     def login_action(self, email, password):
-        if not self.admins:
+        if self.admins is None:
             flash("Internal error: database not available.", "danger")
             return redirect(url_for("admin_auth.login"))
 
