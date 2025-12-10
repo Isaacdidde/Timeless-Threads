@@ -25,7 +25,7 @@ class Config:
     # MongoDB
     # -----------------------------
     MONGO_URI = os.getenv("MONGO_URI")
-    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "timeless_threads")
+    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "timeless_threads_v2")
 
     # -----------------------------
     # Admin seed credentials
@@ -80,7 +80,7 @@ class DevelopmentConfig(Config):
     # Local MongoDB fallback
     MONGO_URI = os.getenv(
         "MONGO_URI",
-        "mongodb://localhost:27017/timeless_threads"
+        "mongodb://localhost:27017/timeless_threads_v2"
     )
 
     # Local DCORP backend (Dev mode)
