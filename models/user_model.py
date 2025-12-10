@@ -1,74 +1,87 @@
-from bson.objectid import ObjectId
+from bson.objectid import ObjectId, errors as bson_errors
+from datetime import datetime
 
 
 class UserModel:
     """
-    Data access layer for the 'users' collection.
-
-    Responsibilities:
-        - Find user by email
-        - Create new user documents
-        - Retrieve user by ID
-
-    This model abstracts MongoDB logic away from controllers.
+    Hardened UserModel for interacting with the 'users' collection.
+    Provides safe access, predictable returns, and isolation from DB failures.
     """
 
     def __init__(self, mongo):
-        # Connect to the users collection
-        self.db = mongo.db.users
-
-    # ---------------------------------------------------------
-    # FIND USER BY EMAIL
-    #
-    # Email is now the unique identifier.
-    # Returns:
-    #   - user document if found
-    #   - None if email is not registered
-    # ---------------------------------------------------------
-    def find_by_email(self, email):
-        """
-        Return a user by email address.
-        """
-        return self.db.find_one({"email": email})
-
-    # ---------------------------------------------------------
-    # CREATE NEW USER DOCUMENT
-    #
-    # Stores the user's email and any additional fields.
-    # extra can include:
-    #     name, address, role etc.
-    #
-    # After inserting, returns the complete created user document.
-    # ---------------------------------------------------------
-    def create(self, email, extra=None):
-        """
-        Create a new user document.
-
-        extra = optional dict for additional fields:
-            name, address, profile info, etc.
-        """
-        data = {"email": email}
-
-        # Add any additional fields
-        if extra and isinstance(extra, dict):
-            data.update(extra)
-
-        # Insert into DB and return the newly created user
-        result = self.db.insert_one(data)
-        return self.get_by_id(result.inserted_id)
-
-    # ---------------------------------------------------------
-    # GET USER BY OBJECT ID
-    #
-    # Accepts string or ObjectId formats.
-    # If user_id is invalid → safely returns None.
-    # ---------------------------------------------------------
-    def get_by_id(self, user_id):
-        """
-        Fetch user by ObjectId safely.
-        """
         try:
-            return self.db.find_one({"_id": ObjectId(user_id)})
-        except Exception:
-            # Invalid ID format
+            self.col = mongo.db.users
+        except Exception as e:
+            print("❌ ERROR: Cannot access 'users' collection:", e)
+            self.col = None
+
+    # =====================================================================
+    # FIND USER BY EMAIL
+    # =====================================================================
+    def find_by_email(self, email: str):
+        if not self.col or not email:
+            return None
+
+        try:
+            return self.col.find_one({"email": email.lower()})
+        except Exception as e:
+            print(f"⚠ WARNING: find_by_email failed for '{email}':", e)
+            return None
+
+    # =====================================================================
+    # FIND USER BY MOBILE
+    # =====================================================================
+    def find_by_mobile(self, mobile: str):
+        if not self.col or not mobile:
+            return None
+
+        try:
+            return self.col.find_one({"mobile": mobile})
+        except Exception as e:
+            print(f"⚠ WARNING: find_by_mobile failed for '{mobile}':", e)
+            return None
+
+    # =====================================================================
+    # CREATE NEW USER
+    # =====================================================================
+    def create(self, **fields):
+        if not self.col:
+            print("❌ ERROR: 'users' collection unavailable — cannot create user")
+            return None
+
+        try:
+            # Normalize email
+            if "email" in fields and isinstance(fields["email"], str):
+                fields["email"] = fields["email"].lower()
+
+            # Add timestamp if missing
+            fields.setdefault("created_at", datetime.utcnow())
+
+            result = self.col.insert_one(fields)
+            return self.get_by_id(result.inserted_id)
+        except Exception as e:
+            print("❌ ERROR: Failed to create user:", e)
+            return None
+
+    # =====================================================================
+    # GET USER BY ID (Safe)
+    # =====================================================================
+    def get_by_id(self, user_id):
+        if not self.col:
+            return None
+
+        # Validate ObjectId
+        try:
+            oid = ObjectId(user_id)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid user_id '{user_id}'")
+            return None
+        except Exception as e:
+            print("⚠ WARNING: Error parsing user_id:", e)
+            return None
+
+        try:
+            return self.col.find_one({"_id": oid})
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to fetch user '{user_id}':", e)
             return None

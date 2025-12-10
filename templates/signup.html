@@ -1,66 +1,131 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLES
-     Loads CSS for the signup name page (step 2 of signup).
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/Signup.css') }}">
+
+<style>
+    .auth-bg {
+        min-height: 100vh;
+        background: #f8f9fc;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 30px;
+    }
+
+    .auth-card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 420px;
+        padding: 34px 34px 40px;
+        border-radius: 18px;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.08);
+        animation: fadeIn 0.35s ease;
+    }
+
+    .auth-input {
+        border-radius: 10px;
+        padding: 10px 14px;
+        border: 1px solid #d5d5d5;
+        transition: .25s;
+    }
+
+    .auth-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.18);
+        outline: none;
+    }
+
+    .auth-btn {
+        border-radius: 10px;
+        padding: 10px;
+        font-weight: 600;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
 
-
-
-<!-- ==========================================================
-     SIGNUP PAGE BACKGROUND WRAPPER
-========================================================== -->
 <div class="auth-bg">
 
-    <!-- ======================================================
-         SIGNUP CARD (Step 2)
-         User enters their full name here.
-         Mobile number was captured earlier and passed as hidden.
-    ======================================================= -->
+    <!-- SIGNUP FORM CARD -->
     <div class="auth-card">
 
-        <!-- Title + Subtitle -->
-        <h3 class="fw-bold text-center mb-3">Create Account</h3>
+        <!-- Heading -->
+        <h3 class="fw-bold text-center mb-2">Create Your Account</h3>
         <p class="text-center text-muted mb-4">
-            Welcome! Let's get your profile set up.
+            Join Timeless Threads for a more personalised shopping experience.
         </p>
 
         <!-- ==================================================
-             NAME INPUT FORM
-             POST → /auth/signup-submit-name
-             Controller:
-               AuthController.submit_signup_name()
-        =================================================== -->
-        <form action="{{ url_for('auth.signup_submit_name') }}" method="post">
+             SIGNUP FORM
+             POST → auth.signup
+        ================================================== -->
+        <form action="{{ url_for('auth.signup') }}" method="post" novalidate>
 
-            <!-- Hidden field carrying mobile number from previous step -->
-            <input type="hidden" name="mobile" value="{{ mobile }}">
-
-            <!-- Name Field -->
-            <label class="fw-semibold">Full Name</label>
+            <!-- FULL NAME -->
+            <label class="fw-semibold mt-1">Full Name</label>
             <input type="text"
-                   class="form-control auth-input mb-3"
                    name="name"
-                   placeholder="Enter your name"
+                   class="form-control auth-input mb-3"
+                   placeholder="Enter your full name"
                    required>
 
-            <!-- Continue to OTP -->
-            <button class="btn btn-dark auth-btn w-100">
+            <!-- EMAIL -->
+            <label class="fw-semibold mt-1">Email Address</label>
+            <input type="email"
+                   name="email"
+                   class="form-control auth-input mb-3"
+                   placeholder="example@mail.com"
+                   required>
+
+            <!-- MOBILE -->
+            <label class="fw-semibold mt-1">Mobile Number</label>
+            <input type="text"
+                   name="mobile"
+                   class="form-control auth-input mb-3"
+                   placeholder="10-digit mobile number"
+                   minlength="10"
+                   maxlength="10"
+                   pattern="[0-9]{10}"
+                   required>
+
+            <!-- AGE -->
+            <label class="fw-semibold mt-1">Age</label>
+            <input type="number"
+                   name="age"
+                   class="form-control auth-input mb-3"
+                   placeholder="Your age"
+                   min="10"
+                   max="120"
+                   required>
+
+            <!-- PASSWORD -->
+            <label class="fw-semibold mt-1">Password</label>
+            <input type="password"
+                   name="password"
+                   class="form-control auth-input mb-3"
+                   placeholder="Create a password"
+                   minlength="6"
+                   required>
+
+            <!-- SUBMIT -->
+            <button class="btn btn-dark auth-btn w-100 mt-2">
                 Create Account
             </button>
         </form>
 
-        <!-- Existing user login redirect -->
-        <div class="text-center mt-3">
+        <!-- LOGIN LINK -->
+        <div class="text-center mt-4">
             <small class="text-muted">
-                Already have an account?
+                Already a member?
                 <a href="{{ url_for('auth.login') }}"
                    class="fw-semibold"
-                   style="color:#ea4c89;">
+                   style="color:#0d6efd;">
                     Login
                 </a>
             </small>

@@ -4,32 +4,55 @@ from models.product_model import ProductModel
 
 class CategoryController:
     def __init__(self, mongo):
-        # Store MongoDB connection and initialize ProductModel
-        # ProductModel handles all product-related DB operations
-        self.products = ProductModel(mongo)
-        self.mongo = mongo
+        try:
+            self.products = ProductModel(mongo)
+            self.mongo = mongo
+        except Exception as e:
+            print("❌ ERROR: Failed to initialize ProductModel:", e)
+            self.products = None
+            self.mongo = None
 
     # ---------------------------------------------------------
-    # SHOW CATEGORY PAGE
-    #
-    # This function:
-    #   1. Ensures MongoDB connection exists.
-    #   2. Fetches all products from a given category.
-    #   3. Renders the category page with product listing.
-    #
-    # Route will look like:
-    #   /category/<name>
-    #
-    # Example: /category/shoes → loads all "shoes" products
+    # SHOW CATEGORY PAGE (Production-Safe)
     # ---------------------------------------------------------
     def show_category(self, name):
-        # Safety check for database connection
-        if self.mongo is None:
-            # abort() sends an HTTP error response (here: 500)
+        """
+        Render a category page with product listings.
+        - Ensures DB availability
+        - Validates category name
+        - Handles model failures
+        - Ensures template never crashes
+        """
+
+        # ----------- Validate category name -----------
+        if not name or not isinstance(name, str):
+            abort(404, "Invalid category name")
+
+        clean_name = name.strip().lower()
+        if not clean_name:
+            abort(404, "Category not found")
+
+        # ----------- Ensure DB connection -----------
+        if not self.mongo or not self.products:
+            print("❌ ERROR: MongoDB or ProductModel unavailable.")
             abort(500, "Database not initialized")
 
-        # Fetch all products belonging to this category
-        products = self.products.get_by_category(name)
+        # ----------- Fetch products safely -----------
+        try:
+            products = self.products.get_by_category(clean_name)
+            if products is None:
+                products = []
+        except Exception as e:
+            print(f"❌ ERROR: Failed to fetch products for '{clean_name}':", e)
+            products = []
 
-        # Render category page with the product listing
-        return render_template("category.html", category=name, products=products)
+        # ----------- Render template safely -----------
+        try:
+            return render_template(
+                "category.html",
+                category=clean_name,
+                products=products
+            )
+        except Exception as e:
+            print("❌ ERROR: Failed to render category template:", e)
+            abort(500, "Page render error")

@@ -1,98 +1,178 @@
-from bson.objectid import ObjectId
+from bson.objectid import ObjectId, errors as bson_errors
 
 
 class ProductModel:
     """
-    Model for interacting with the 'products' collection in MongoDB.
-
-    Responsibilities:
-        - Fetch products by category
-        - Fetch a product by ID
-        - Insert new product documents
-        - List products with limit
-        - Perform keyword-based search
-
-    This model acts as a clean abstraction layer so controllers
-    don't directly interact with MongoDB queries.
+    Production-Ready Model for interacting with the 'products' collection.
+    Includes safety wrappers for Mongo access, ObjectId validation,
+    and predictable fallback returns so the app never breaks.
     """
 
     def __init__(self, mongo):
-        # Bind the model to the 'products' collection
-        self.db = mongo.db.products
-
-    # ---------------------------------------------------------
-    # GET ALL PRODUCTS IN A CATEGORY
-    #
-    # Example:
-    #     model.get_by_category("shoes")
-    # ---------------------------------------------------------
-    def get_by_category(self, category_name):
-        """
-        Fetch all products belonging to a given category.
-        Returns a list of documents.
-        """
-        return list(self.db.find({"category": category_name}))
-
-    # ---------------------------------------------------------
-    # GET A SINGLE PRODUCT BY ID
-    #
-    # Converts string ID to ObjectId safely.
-    # Returns None if the ID is invalid.
-    # ---------------------------------------------------------
-    def get_by_id(self, pid):
-        """
-        Fetch a single product by its ObjectId.
-        """
         try:
-            return self.db.find_one({"_id": ObjectId(pid)})
-        except Exception:
-            # If the ID is not a valid ObjectId or any error occurs
+            self.db = mongo.db.products
+        except Exception as e:
+            print("❌ ERROR: Cannot access products collection:", e)
+            self.db = None
+
+    # =====================================================================
+    # GET ALL PRODUCTS IN A CATEGORY
+    # =====================================================================
+    def get_by_category(self, category_name):
+        if not self.db:
+            return []
+
+        try:
+            return list(self.db.find({"category": category_name}))
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to fetch products for category '{category_name}':", e)
+            return []
+
+    # =====================================================================
+    # GET PRODUCT BY ID (Safe ObjectId Handling)
+    # =====================================================================
+    def get_by_id(self, pid):
+        if not self.db:
             return None
 
-    # ---------------------------------------------------------
-    # LIST ALL PRODUCTS WITH LIMIT
-    #
-    # Useful for homepage, admin listings, category previews, etc.
-    # ---------------------------------------------------------
+        try:
+            oid = ObjectId(pid)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid product ID '{pid}'")
+            return None
+        except Exception as e:
+            print("⚠ WARNING: Error handling product ID:", e)
+            return None
+
+        try:
+            return self.db.find_one({"_id": oid})
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to fetch product '{pid}':", e)
+            return None
+
+    # =====================================================================
+    # LIST PRODUCTS WITH LIMIT
+    # =====================================================================
     def list_all(self, limit=100):
-        """
-        Return all products up to a limit.
-        """
-        return list(self.db.find().limit(limit))
+        if not self.db:
+            return []
 
-    # ---------------------------------------------------------
-    # INSERT PRODUCT DOCUMENT
-    #
-    # product_data should be a dict containing:
-    #     name, price, category, image, discount, etc.
-    #
-    # After insertion, fetch the created product document.
-    # ---------------------------------------------------------
+        try:
+            return list(self.db.find().limit(limit))
+        except Exception as e:
+            print("⚠ WARNING: Failed to list products:", e)
+            return []
+
+    # =====================================================================
+    # INSERT PRODUCT
+    # =====================================================================
     def insert(self, product_data):
-        """
-        Insert a new product document.
-        product_data is a dict with: name, price, image, category, discount, etc.
-        """
-        result = self.db.insert_one(product_data)
-        return self.get_by_id(result.inserted_id)
+        if not self.db:
+            return None
 
-    # ---------------------------------------------------------
-    # SEARCH PRODUCTS BY NAME
-    #
-    # Case-insensitive search using MongoDB regex.
-    # Example:
-    #     model.search("shirt")
-    #
-    # Matches:
-    #     "Blue Shirt"
-    #     "shirt for men"
-    # ---------------------------------------------------------
+        try:
+            result = self.db.insert_one(product_data)
+            return self.get_by_id(result.inserted_id)
+        except Exception as e:
+            print("❌ ERROR: Failed to insert product:", e)
+            return None
+
+    # =====================================================================
+    # UPDATE PRODUCT DOCUMENT
+    # =====================================================================
+    def update(self, product_id, update_data):
+        if not self.db:
+            return None
+
+        try:
+            oid = ObjectId(product_id)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid product ID '{product_id}'")
+            return None
+
+        try:
+            self.db.update_one({"_id": oid}, {"$set": update_data})
+            return self.get_by_id(product_id)
+        except Exception as e:
+            print(f"❌ ERROR: Failed to update product '{product_id}':", e)
+            return None
+
+    # =====================================================================
+    # REMOVE IMAGE FROM IMAGES ARRAY
+    # =====================================================================
+    def remove_image(self, product_id, filename):
+        if not self.db:
+            return False
+
+        try:
+            oid = ObjectId(product_id)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid product ID '{product_id}'")
+            return False
+
+        try:
+            self.db.update_one({"_id": oid}, {"$pull": {"images": filename}})
+            return True
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to remove image for '{product_id}':", e)
+            return False
+
+    # =====================================================================
+    # SET PRIMARY IMAGE
+    # =====================================================================
+    def set_primary_image(self, product_id, filename):
+        if not self.db:
+            return False
+
+        try:
+            oid = ObjectId(product_id)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid product ID '{product_id}'")
+            return False
+
+        try:
+            self.db.update_one({"_id": oid}, {"$set": {"primary_image": filename}})
+            return True
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to set primary image for '{product_id}':", e)
+            return False
+
+    # =====================================================================
+    # UPDATE PRODUCT DETAILS
+    # =====================================================================
+    def update_details(self, product_id, details_list):
+        if not self.db:
+            return False
+
+        try:
+            oid = ObjectId(product_id)
+        except bson_errors.InvalidId:
+            print(f"⚠ WARNING: Invalid product ID '{product_id}'")
+            return False
+
+        try:
+            self.db.update_one({"_id": oid}, {"$set": {"details": details_list}})
+            return True
+        except Exception as e:
+            print(f"⚠ WARNING: Failed to update details for '{product_id}':", e)
+            return False
+
+    # =====================================================================
+    # SEARCH (SAFE REGEX)
+    # =====================================================================
     def search(self, keyword):
-        """
-        Perform case-insensitive search on product name.
-        """
-        return list(
-            self.db.find({
-                "name": {"$regex": keyword, "$options": "i"}  # "i" → ignore case
-            })
-        )
+        if not self.db:
+            return []
+
+        if not keyword:
+            return []
+
+        try:
+            return list(
+                self.db.find({
+                    "name": {"$regex": keyword, "$options": "i"}
+                })
+            )
+        except Exception as e:
+            print(f"⚠ WARNING: Search failed for keyword '{keyword}':", e)
+            return []

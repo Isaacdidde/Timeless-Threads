@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or "Timeless Threads Admin" }}</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* TOP NAVBAR */
+        .admin-topbar {
+            background: #161b22;
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid #30363d;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+        }
+
+        .hamburger {
+            font-size: 26px;
+            color: #e6edf3;
+            cursor: pointer;
+        }
+
+        .topbar-title {
+            font-weight: 600;
+            font-size: 18px;
+            color: #e6edf3;
+        }
+
+        /* SIDEBAR */
+        .admin-sidebar {
+            width: 250px;
+            background: rgba(22, 27, 34, 0.95);
+            height: calc(100vh - 60px);
+            position: fixed;
+            top: 60px;
+            left: 0;
+            padding-top: 5px;
+            border-right: 1px solid #30363d;
+            transition: 0.3s ease-in-out;
+            overflow-y: auto;
+            z-index: 1500;
+        }
+
+        .admin-sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar-logo-collapsed {
+            height: 5px;
+            margin-bottom: 5px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .admin-sidebar.collapsed .sidebar-logo-collapsed {
+            opacity: 0;
+        }
+
+        .admin-sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            color: #c9d1d9;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .admin-sidebar a:hover {
+            background: #21262d;
+            color: #fff;
+            border-left: 3px solid #58a6ff;
+        }
+
+        /* Hide text when collapsed */
+        .admin-sidebar.collapsed a span {
+            display: none;
+        }
+
+        .admin-sidebar.collapsed a {
+            justify-content: center;
+        }
+
+        /* MAIN CONTENT */
+        .admin-content {
+            margin-left: 260px;
+            margin-top: 80px;
+            padding: 20px 30px;
+            transition: 0.3s ease-in-out;
+        }
+
+        .admin-content.expanded {
+            margin-left: 90px;
+        }
+
+        /* LOGOUT MODAL */
+        .modal-content {
+            background: #161b22;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+        }
+
+        .btn-logout {
+            background: #da3633;
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background: #b62324;
+        }
+
+        /* Category card images */
+        .category-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            object-position: center;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- TOP NAV -->
+<div class="admin-topbar">
+    <i class="bi bi-list hamburger" id="sidebarToggle"></i>
+    <div class="topbar-title">Timeless Threads Admin</div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="admin-sidebar" id="sidebar">
+
+    <div class="sidebar-logo-collapsed"></div>
+
+    <a href="{{ url_for('admin_panel.dashboard') }}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('admin_category.list_categories') }}">
+        <i class="bi bi-grid"></i>
+        <span>Categories</span>
+    </a>
+
+    <a href="{{ url_for('admin_product.list_products') }}">
+        <i class="bi bi-box-seam"></i>
+        <span>Products</span>
+    </a>
+
+    <a href="{{ url_for('admin_ads.campaigns') }}">
+        <i class="bi bi-badge-ad"></i>
+        <span>Ads Manager</span>
+    </a>
+
+    <hr style="border-color:#30363d;">
+
+    <a href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Logout</span>
+    </a>
+</div>
+
+
+<!-- MAIN CONTENT -->
+<div class="admin-content" id="content">
+
+    <!-- ADMIN FLASH MESSAGES (fix for your issue) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mt-2">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show"
+                 role="alert"
+                 style="background:#1f6feb30; border:1px solid #1f6feb; color:#58a6ff;">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+
+<!-- LOGOUT MODAL -->
+<div class="modal fade" id="logoutModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Logout</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to log out from the Timeless Threads admin panel?
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a href="{{ url_for('admin_auth.logout') }}" class="btn btn-logout">Yes, Logout</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+    const toggle = document.getElementById("sidebarToggle");
+
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+        content.classList.toggle("expanded");
+    });
+</script>
+
+</body>
+</html>

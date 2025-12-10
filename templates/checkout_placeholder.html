@@ -1,52 +1,55 @@
 {% extends "base.html" %}
+
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLES
-     Loads a small custom CSS file for the placeholder animation.
-     This keeps checkout-related styles separated from global CSS.
-========================================================== -->
+{# ==========================================================
+   PAGE-SPECIFIC STYLES
+   Loads a lightweight CSS file for the typewriter + robot effects.
+   This is isolated from global styling for clean separation.
+========================================================== #}
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout_placeholder.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/checkout_placeholder.css') }}">
 {% endblock %}
 
 
-
-<!-- ==========================================================
-     CHECKOUT PLACEHOLDER CARD
-     This is shown until the real checkout system is implemented.
-     Includes:
-       - Typewriter text animation
-       - Robot loader GIF
-       - Message + CTA button
-========================================================== -->
+{# ==========================================================
+   CHECKOUT PLACEHOLDER SECTION
+   This is shown until the full checkout system goes live.
+   Includes:
+     - Typewriter animation
+     - Robot loader GIF
+     - Friendly placeholder message
+     - Navigation back to homepage
+========================================================== #}
 <div class="d-flex justify-content-center mt-5">
 
-  <!-- Centered Card -->
-  <div class="card p-4 text-center shadow-sm" style="max-width:520px;">
+  <div class="card p-4 text-center shadow-sm" style="max-width: 520px; width: 100%;">
 
-    <!-- Animated heading -->
-    <div class="typewriter mb-3">Checkout is Getting Ready...</div>
+    <!-- Heading (animated) -->
+    <div class="typewriter mb-3">
+      Checkout is Getting Ready...
+    </div>
 
-    <!-- Robot animation -->
-    <img 
-      src="{{ url_for('static', filename='images/robot_loader.gif') }}" 
-      class="robot mb-3" 
-      alt="robot"
-    >
+    <!-- Robot loader animation -->
+    <img src="{{ url_for('static', filename='images/robot_loader.gif') }}"
+         class="robot mb-3"
+         alt="Loading animation">
 
-    <!-- Description -->
+    <!-- Description text -->
     <p class="text-muted">
-      We're crafting a smooth and secure checkout experience.  
-      Coming soon — thanks for your patience.
+      We're crafting a smooth and secure checkout experience.<br>
+      Thanks for your patience — it's almost ready.
     </p>
 
-    <!-- Return to home button -->
-    <a href="{{ url_for('main.home') }}" class="btn btn-outline-dark mt-3">
+    <!-- CTA Button -->
+    <a href="{{ url_for('main.home') }}"
+       class="btn btn-outline-dark mt-3">
       Continue Shopping
     </a>
 
   </div>
+
 </div>
 
 {% endblock %}

@@ -1,56 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLES
-     Loads custom CSS for logout confirmation UI.
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/logout_confirm.css') }}">
+<style>
+    .logout-wrapper {
+        min-height: 70vh;
+        padding: 32px 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .logout-card {
+        max-width: 420px;
+        width: 100%;
+        background: #fff;
+        border-radius: 18px;
+        padding: 34px 36px !important;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.10);
+        animation: fadeIn 0.25s ease-out;
+    }
+
+    .logout-btn {
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        border-radius: 10px;
+    }
+
+    .logout-card a.btn {
+        border-radius: 10px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
 
 
-<!-- ==========================================================
-     LOGOUT CONFIRMATION WRAPPER
-     Centers the confirmation card both vertically and horizontally.
-========================================================== -->
-<div class="logout-wrapper d-flex justify-content-center align-items-center">
-    
-    <!-- ======================================================
-         LOGOUT CONFIRMATION CARD
-         Contains:
-           - Title
-           - Prompt message
-           - Logout button (POST request)
-           - Cancel button redirecting to home
-    ======================================================= -->
-    <div class="logout-card shadow-lg p-4 text-center">
+<div class="logout-wrapper">
 
-        <!-- Title -->
+    <div class="logout-card text-center">
+
         <h3 class="fw-bold mb-2">Logout Confirmation</h3>
 
-        <!-- Description -->
         <p class="text-muted mb-4">
-            Are you sure you want to log out from <b>Timeless Threads</b>?
+            Are you sure you want to log out from
+            <strong>Timeless Threads</strong>?
         </p>
 
-        <!-- ==================================================
-             FORM — POST to confirm logout
-             Route:
-               auth.logout_confirm
-        =================================================== -->
-        <form action="{{ url_for('auth.logout_confirm') }}" method="post">
+        <form action="{{ url_for('auth.logout_confirm') }}"
+              method="POST"
+              onsubmit="this.querySelector('button').disabled = true;">
 
-            <!-- Confirm Logout Button -->
+            <!-- Confirm Logout -->
             <button type="submit"
                     class="btn btn-danger w-100 py-2 mb-2 logout-btn">
                 Yes, Logout
             </button>
 
-            <!-- Cancel Button → return to home page -->
+            <!-- Cancel -->
             <a href="{{ url_for('main.home') }}"
                class="btn btn-outline-dark w-100 py-2">
-               Cancel
+                Cancel
             </a>
 
         </form>

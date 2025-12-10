@@ -1,0 +1,84 @@
+{# templates/ads/card_ad.html — Production Ready Small Ad Card #}
+{% if ad %}
+<div class="card product-card h-100 position-relative shadow-sm hover-lift"
+     style="border-radius:12px; overflow:hidden; background:#fff;">
+
+    <a href="{{ ad.redirect_url or '#' }}"
+       target="_blank"
+       class="tt-ad-link-card"
+       data-campaign-id="{{ ad.campaign_id }}"
+       data-slot-id="{{ ad.slot_id }}"
+       style="display:block; text-decoration:none; color:inherit;">
+
+        <!-- SAME AS PRODUCT CARD HEIGHT RATIO -->
+        <div style="width:100%; position:relative; padding-top:72%; overflow:hidden;">
+            <img src="{{ ad.image_url }}"
+                 alt="{{ ad.headline or 'Sponsored' }}"
+                 class="tt-ad-img-card"
+                 loading="lazy"
+                 style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+        </div>
+
+        {% if ad.headline %}
+        <div class="p-3">
+          <h6 class="mb-1 fw-semibold text-truncate" style="font-size:14px;">
+            {{ ad.headline }}
+          </h6>
+        </div>
+        {% endif %}
+    </a>
+</div>
+
+<script>
+(function () {
+    try {
+        // ⭐ Always pull API URL from Flask config
+        const root = "{{ current_app.config.get('DCORP_API_URL', '') }}".trim();
+        if (!root) return;
+
+        const wrapper = document.currentScript.previousElementSibling;
+        if (!wrapper) return;
+
+        const link = wrapper.querySelector(".tt-ad-link-card");
+        const img  = wrapper.querySelector(".tt-ad-img-card");
+        if (!link) return;
+
+        const campaignId = link.dataset.campaignId;
+        const slotId = link.dataset.slotId;
+
+        if (!campaignId || !slotId) return;
+
+        // --- Impression Tracking ---
+        function sendImpression() {
+            fetch(`${root}/api/ads/track/impression`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                })
+            }).catch(() => {});
+        }
+
+        if (img) {
+            img.complete ? sendImpression() : img.addEventListener("load", sendImpression);
+        }
+
+        // --- Click Tracking ---
+        link.addEventListener("click", () => {
+            fetch(`${root}/api/ads/track/click`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                })
+            }).catch(() => {});
+        });
+
+    } catch (err) {
+        console.error("card_ad tracking error:", err);
+    }
+})();
+</script>
+{% endif %}

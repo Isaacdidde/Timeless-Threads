@@ -1,0 +1,382 @@
+{% extends "admin/layout/base_admin.html" %}
+{% block content %}
+
+<style>
+/* Dark UI structure */
+.detail-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px;
+    color: #e6edf3 !important;
+}
+.detail-box * { color: #e6edf3 !important; }
+
+.edit-section input,
+.edit-section textarea {
+    background: #0d1117 !important;
+    border: 1px solid #30363d !important;
+    color: #fff !important;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+/* ===================== IMAGE MANAGEMENT ===================== */
+.img-box {
+    background:#0d1117;
+    border:1px solid #30363d;
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:10px;
+}
+
+.img-preview {
+    width:120px;
+    height:120px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid #30363d;
+}
+
+.img-actions button {
+    margin-right:6px;
+}
+
+/* Highlight primary image */
+.primary-badge {
+    background:#58a6ff;
+    padding:3px 8px;
+    border-radius:6px;
+    font-size:12px;
+    margin-left:5px;
+}
+
+</style>
+
+
+<h2 class="mb-4">Edit Product</h2>
+
+<form method="POST" enctype="multipart/form-data"
+      class="p-4"
+      style="background:#161b22; border-radius:10px; color:#e6edf3;">
+
+
+    <!-- NAME -->
+    <div class="mb-3">
+        <label class="form-label">Product Name</label>
+        <input type="text" name="name" value="{{ product.name }}" class="form-control" required>
+    </div>
+
+    <!-- CATEGORY -->
+    <div class="mb-3">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-control">
+            {% for c in categories %}
+            <option value="{{ c.slug }}" {% if c.slug == product.category_slug %}selected{% endif %}>
+                {{ c.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- PRICE / DISCOUNT / STOCK -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Price (₹)</label>
+            <input type="number" name="price" value="{{ product.price }}" class="form-control">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Discount (%)</label>
+            <input type="number" name="discount" value="{{ product.discount }}" class="form-control">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Stock</label>
+            <input type="number" name="stock" value="{{ product.stock }}" class="form-control">
+        </div>
+    </div>
+
+    <!-- SIZES -->
+    <div class="mb-3">
+        <label class="form-label">Sizes</label>
+        <input type="text" name="sizes"
+               value="{{ product.sizes | join(', ') if product.sizes else '' }}"
+               class="form-control"
+               placeholder="S, M, L, XL">
+    </div>
+
+    <!-- COLORS -->
+    <div class="mb-3">
+        <label class="form-label">Colors</label>
+        <input type="text" name="colors"
+               value="{{ product.colors | join(', ') if product.colors else '' }}"
+               class="form-control"
+               placeholder="red, blue, #000000">
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" rows="4" class="form-control">{{ product.description }}</textarea>
+    </div>
+
+
+
+
+    <!-- ========================================================= -->
+<!-- =============== IMAGE MANAGEMENT SECTION ================ -->
+<!-- ========================================================= -->
+
+<h4 class="mt-4 mb-3">Product Images</h4>
+
+<div class="row">
+
+    <!-- PRIMARY IMAGE -->
+    <div class="col-md-4">
+        <h6>Primary Image</h6>
+
+        {% if product.primary_image %}
+        <div class="img-box">
+            <img src="{{ url_for('static', filename='uploads/products/' ~ product.primary_image) }}"
+                 class="img-preview">
+
+            <div class="img-actions mt-2">
+                <a href="{{ url_for('admin_product.delete_image',
+                                    product_id=product._id,
+                                    filename=product.primary_image) }}"
+                   class="btn btn-danger btn-sm">
+                    Delete Primary
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <label class="form-label mt-2">Upload New Primary Image</label>
+        <input type="file" name="primary_image_file" class="form-control">
+    </div>
+
+
+
+    <!-- OTHER IMAGES -->
+    <div class="col-md-8">
+        <h6>Additional Images</h6>
+
+        <div class="row">
+            {% for img in product.images %}
+            <div class="col-md-4">
+                <div class="img-box">
+
+                    <img src="{{ url_for('static', filename='uploads/products/' ~ img) }}"
+                         class="img-preview">
+
+                    <div class="img-actions mt-2">
+
+                        <!-- Make Primary -->
+                        <a href="{{ url_for('admin_product.set_primary',
+                                            product_id=product._id,
+                                            filename=img) }}"
+                           class="btn btn-info btn-sm">
+                            Make Primary
+                        </a>
+
+                        <!-- Delete -->
+                        <a href="{{ url_for('admin_product.delete_image',
+                                            product_id=product._id,
+                                            filename=img) }}"
+                           class="btn btn-danger btn-sm">
+                            Delete
+                        </a>
+
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Upload multiple new images -->
+        <label class="form-label mt-2">Upload More Images</label>
+        <input type="file" name="images[]" multiple class="form-control">
+    </div>
+
+</div>
+
+    <!-- ========================================================= -->
+    <!-- =============== SPECIFICATION EDITOR ==================== -->
+    <!-- ========================================================= -->
+
+    <h4 class="mt-4 mb-3">Product Detail Sections</h4>
+
+    <div id="detailsContainer">
+        {% for section in product.details %}
+        <div class="detail-box mb-3" data-id="{{ section.id }}">
+
+            <div class="detail-header">
+                <div class="d-flex align-items-center">
+                    <div class="detail-handle">☰</div>
+                    <strong>{{ section.title }}</strong>
+                </div>
+
+                <div>
+                    <button type="button"
+                            class="btn btn-warning btn-small me-1"
+                            onclick="enableEdit('{{ section.id }}')">Edit</button>
+
+                    <button type="button"
+                            class="btn btn-danger btn-small"
+                            onclick="deleteSection('{{ product._id }}','{{ section.id }}')">Delete</button>
+                </div>
+            </div>
+
+            <!-- VIEW MODE -->
+<div class="view-section mt-3" id="view_{{ section.id }}">
+    {% for item in section["items"] %}
+        <div>• {{ item }}</div>
+    {% endfor %}
+</div>
+
+<!-- EDIT MODE -->
+<div class="edit-section mt-3" id="edit_{{ section.id }}" style="display:none;">
+    <label class="form-label">Title</label>
+    <input id="title_{{ section.id }}" type="text"
+           class="form-control mb-2"
+           value="{{ section.title }}">
+
+    <label class="form-label">Items (one per line)</label>
+    <textarea id="items_{{ section.id }}" rows="3" class="form-control">
+{{ section["items"] | join('\n') }}
+    </textarea>
+
+    <button type="button" class="btn btn-success btn-small mt-2"
+            onclick="saveSection('{{ product._id }}','{{ section.id }}')">Save</button>
+
+    <button type="button" class="btn btn-secondary btn-small mt-2"
+            onclick="disableEdit('{{ section.id }}')">Cancel</button>
+</div>
+
+
+        </div>
+        {% endfor %}
+    </div>
+
+    <button type="button" class="btn btn-secondary mt-3" onclick="addSectionUI()">
+        + Add New Section
+    </button>
+
+
+    <div class="mt-4">
+        <button class="btn btn-primary">Update Product</button>
+    </div>
+
+</form>
+
+
+
+
+<!-- ========================================================= -->
+<!-- ================== IMAGE ACTION SCRIPTS ================= -->
+<!-- ========================================================= -->
+
+<script>
+function deleteImage(productId, filename, isPrimary) {
+    if (!confirm("Delete this image?")) return;
+
+    fetch(`/admin/products/delete-image/${productId}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ filename, isPrimary })
+    }).then(r => r.json()).then(d => {
+        if (d.success) location.reload();
+    });
+}
+
+function makePrimary(productId, filename) {
+    fetch(`/admin/products/set-primary/${productId}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ filename })
+    }).then(r => r.json()).then(d => {
+        if (d.success) location.reload();
+    });
+}
+</script>
+
+
+<!-- SORT + SPEC EDIT JS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+new Sortable(detailsContainer, {
+    animation: 160,
+    handle: ".detail-handle",
+    onSort: () => {
+        const order = [...document.querySelectorAll(".detail-box")].map(x => x.dataset.id);
+        fetch(`/admin/products/section/reorder/{{ product._id }}`, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({order})
+        });
+    }
+});
+
+function enableEdit(id) {
+    document.getElementById(`edit_${id}`).style.display = "block";
+    document.getElementById(`view_${id}`).style.display = "none";
+}
+
+function disableEdit(id) {
+    document.getElementById(`edit_${id}`).style.display = "none";
+    document.getElementById(`view_${id}`).style.display = "block";
+}
+
+function saveSection(productId, sectionId) {
+    const title = document.getElementById(`title_${sectionId}`).value;
+    const items = document.getElementById(`items_${sectionId}`).value;
+
+    fetch(`/admin/products/section/update/${productId}/${sectionId}`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({title, items})
+    }).then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
+}
+
+function deleteSection(productId, sectionId){
+    if(!confirm("Delete?")) return;
+    fetch(`/admin/products/section/delete/${productId}/${sectionId}`,{method:"POST"})
+    .then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
+}
+
+function addSectionUI() {
+    const id="new_"+Date.now();
+    detailsContainer.insertAdjacentHTML("beforeend",`
+        <div class="detail-box mb-3" data-id="${id}">
+            <div class="detail-header">
+                <div class="d-flex align-items-center">
+                    <div class="detail-handle">☰</div>
+                    <strong>New Section</strong>
+                </div>
+            </div>
+
+            <div class="edit-section mt-3" style="display:block">
+                <label class="form-label">Title</label>
+                <input id="title_${id}" class="form-control mb-2">
+
+                <label class="form-label">Items</label>
+                <textarea id="items_${id}" rows="3" class="form-control"></textarea>
+
+                <button class="btn btn-success btn-small mt-2" onclick="saveNewSection('${id}')">Save</button>
+            </div>
+        </div>
+    `);
+}
+
+function saveNewSection(id){
+    const title=document.getElementById(`title_${id}`).value;
+    const items=document.getElementById(`items_${id}`).value;
+
+    fetch(`/admin/products/section/add/{{ product._id }}`,{
+        method:"POST",
+        body:new URLSearchParams({title,items})
+    }).then(r=>r.json()).then(d=>{ if(d.success) location.reload(); });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% if ad %}
+<div class="tt-banner-ad" style="width:100%; margin:0; padding:0;">
+  <a href="{{ ad.redirect_url or '#' }}"
+     target="_blank"
+     rel="noopener nofollow"
+     class="tt-ad-link"
+     data-campaign="{{ ad.campaign_id }}"
+     data-slot="{{ ad.slot_id }}"
+     style="display:block; width:100%; padding:0; margin:0;">
+
+      <img src="{{ ad.image_url }}"
+           alt="{{ ad.headline or 'Advertisement' }}"
+           style="width:100%; height:auto; display:block; margin:0; padding:0;"
+           loading="lazy"
+           class="tt-ad-img">
+  </a>
+</div>
+
+<script>
+/* ============================================================
+   Timeless Threads — Ad Impression & Click Tracking
+   This script is isolated, safe and production-ready.
+============================================================ */
+(function() {
+    try {
+        // ------------------------------------------------------------
+        // Load base URL from Flask config (injected via template)
+        // Falls back to Render or local development automatically.
+        // ------------------------------------------------------------
+        const DCORP_API = "{{ current_app.config.get('DCORP_API_URL', '') }}".trim() ||
+                          window.location.origin; // Safe fallback
+
+        const wrapper = document.currentScript.previousElementSibling;
+        if (!wrapper) return;
+
+        const link = wrapper.querySelector(".tt-ad-link");
+        const img  = wrapper.querySelector(".tt-ad-img");
+        if (!link) return;
+
+        const campaignId = link.dataset.campaign;
+        const slotId = link.dataset.slot;
+
+        if (!campaignId || !slotId) return;
+
+        // -------------------------------
+        // IMPRESSION TRACKING
+        // -------------------------------
+        const sendImpression = () => {
+            fetch(`${DCORP_API}/api/ads/track/impression`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                })
+            }).catch(() => {});
+        };
+
+        if (img) {
+            img.complete ? sendImpression() : img.addEventListener("load", sendImpression);
+        }
+
+        // -------------------------------
+        // CLICK TRACKING
+        // -------------------------------
+        link.addEventListener("click", () => {
+            fetch(`${DCORP_API}/api/ads/track/click`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                })
+            }).catch(() => {});
+        });
+
+    } catch (err) {
+        console.error("[TT Banner Ad] Tracking error:", err);
+    }
+})();
+</script>
+
+{% endif %}

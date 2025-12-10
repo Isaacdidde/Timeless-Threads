@@ -1,0 +1,17 @@
+[
+  {
+    "_id": {
+      "$oid": "69307d97856d974188884110"
+    },
+    "name": "Ethnic Saree",
+    "category": "ethnic",
+    "price": 5000.0,
+    "discount": 10.0,
+    "stock": 100,
+    "description": "Very good and elegent design saree!",
+    "images": [
+      "e4e36d98cb074284880dfc604fc230a6.jpg"
+    ],
+    "primary_image": "e4e36d98cb074284880dfc604fc230a6.jpg"
+  }
+]

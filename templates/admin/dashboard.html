@@ -1,0 +1,122 @@
+{% extends "admin/layout/base_admin.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- PAGE TITLE -->
+    <h2 class="mb-4">Dashboard</h2>
+
+    <!-- ======================= STATS ROW ======================= -->
+    <div class="row g-4">
+
+        <!-- TOTAL USERS / CUSTOMERS -->
+        <div class="col-md-3">
+            <div class="p-4 rounded" style="background:#161b22; border:1px solid #30363d;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="bi bi-people" style="font-size:36px; color:#58a6ff;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Total Users</h6>
+                        <h3 class="fw-bold">{{ total_customers }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOTAL ADVERTISERS -->
+        <div class="col-md-3">
+            <div class="p-4 rounded" style="background:#161b22; border:1px solid #30363d;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="bi bi-person-badge" style="font-size:36px; color:#ffa657;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Total Advertisers</h6>
+                        <h3 class="fw-bold">{{ total_advertisers }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOTAL CAMPAIGNS -->
+        <div class="col-md-3">
+            <div class="p-4 rounded" style="background:#161b22; border:1px solid:#30363d;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="bi bi-megaphone" style="font-size:36px; color:#58a6ff;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Total Campaigns</h6>
+                        <h3 class="fw-bold">{{ total_campaigns }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TODAY'S AD CLICKS -->
+        <div class="col-md-3">
+            <div class="p-4 rounded" style="background:#161b22; border:1px solid:#30363d;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="bi bi-mouse" style="font-size:36px; color:#ffa657;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Today's Ad Clicks</h6>
+                        <h3 class="fw-bold">{{ today_clicks }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ======================= QUICK ACTIONS ======================= -->
+    <h4 class="mt-5 mb-3">Quick Shortcuts</h4>
+
+    <div class="row g-4">
+
+        <!-- PRODUCTS -->
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_product.list_products') }}" class="text-decoration-none text-light">
+                <div class="p-4 rounded text-center" style="background:#21262d; border:1px solid #30363d;">
+                    <i class="bi bi-box-seam" style="font-size:32px; color:#58a6ff;"></i>
+                    <h6 class="mt-2">Manage Products</h6>
+                </div>
+            </a>
+        </div>
+
+        <!-- CATEGORIES -->
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_category.list_categories') }}" class="text-decoration-none text-light">
+                <div class="p-4 rounded text-center" style="background:#21262d; border:1px solid #30363d;">
+                    <i class="bi bi-grid" style="font-size:32px; color:#58a6ff;"></i>
+                    <h6 class="mt-2">Manage Categories</h6>
+                </div>
+            </a>
+        </div>
+
+        <!-- ADS MANAGER -->
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_ads.campaigns') }}" class="text-decoration-none text-light">
+                <div class="p-4 rounded text-center" style="background:#21262d; border:1px solid #30363d;">
+                    <i class="bi bi-badge-ad" style="font-size:32px; color:#58a6ff;"></i>
+                    <h6 class="mt-2">Ads Manager</h6>
+                </div>
+            </a>
+        </div>
+
+        <!-- LOGOUT -->
+        <div class="col-md-3">
+            <a href="#" data-bs-toggle="modal" data-bs-target="#logoutModal" class="text-decoration-none text-light">
+                <div class="p-4 rounded text-center" style="background:#21262d; border:1px solid #30363d;">
+                    <i class="bi bi-box-arrow-right" style="font-size:32px; color:#da3633;"></i>
+                    <h6 class="mt-2">Logout</h6>
+                </div>
+            </a>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

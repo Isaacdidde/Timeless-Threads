@@ -1,0 +1,213 @@
+{% extends "admin/layout/base_admin.html" %}
+{% block content %}
+
+<h2 class="mb-4">Add New Product</h2>
+
+<form method="POST" enctype="multipart/form-data"
+      class="p-4"
+      style="background:#161b22; border-radius:10px; color:#e6edf3;">
+
+
+    <!-- ========================= PRODUCT NAME ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Product Name</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+
+
+    <!-- ========================= CATEGORY ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-control" required>
+            {% for c in categories %}
+            <option value="{{ c.slug }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+
+    <!-- ================= PRICE / DISCOUNT / STOCK ================= -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Price (₹)</label>
+            <input type="number" step="0.01" name="price" class="form-control" required>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Discount (%)</label>
+            <input type="number" name="discount" class="form-control">
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Stock</label>
+            <input type="number" name="stock" class="form-control" required>
+        </div>
+    </div>
+
+
+
+    <!-- ========================= SIZES ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Sizes (comma separated)</label>
+        <input type="text" name="sizes" placeholder="S, M, L, XL" class="form-control">
+    </div>
+
+
+    <!-- ========================= COLORS ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Colors (comma separated)</label>
+        <input type="text" name="colors" placeholder="red, blue, #000000" class="form-control">
+    </div>
+
+
+
+    <!-- ========================= IMAGE UPLOAD ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Upload Images (Multiple Allowed)</label>
+        <input type="file"
+               name="images[]"
+               id="imageInput"
+               class="form-control"
+               multiple
+               accept="image/*">
+
+        <div id="previewArea"
+             class="d-flex gap-2 mt-3 flex-wrap">
+        </div>
+    </div>
+
+
+
+    <!-- ========================= DESCRIPTION ========================= -->
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description"
+                  rows="4"
+                  class="form-control"></textarea>
+    </div>
+
+
+
+    <!-- ================================================================ -->
+    <!-- ================= PRODUCT DETAIL SECTIONS ======================= -->
+    <!-- ================================================================ -->
+
+    <h4 class="mt-4 mb-2">Product Detail Sections</h4>
+    <p class="text-muted">
+        Use this to add specification groups such as
+        <strong>Material</strong>, <strong>How It Works</strong>, <strong>Features</strong>, etc.
+        Each item becomes a bullet on the product page.
+    </p>
+
+
+    <div id="detailsContainer">
+
+        <!-- ONE INITIAL EMPTY SECTION -->
+        <div class="detail-box border rounded p-3 mb-3"
+             style="border-color:#30363d; background:#0d1117; border-radius:12px;">
+
+            <label class="form-label">Section Title</label>
+            <input type="text"
+                   class="form-control mb-2"
+                   name="detail_title[]"
+                   placeholder="Example: Material">
+
+            <label class="form-label">Items (One per line)</label>
+            <textarea name="detail_items[]"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Cotton&#10;Handmade work&#10;Machine washable"></textarea>
+
+            <button type="button"
+                    class="btn btn-danger btn-sm mt-2"
+                    onclick="this.parentElement.remove()">
+                Delete Section
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ADD NEW SECTION BUTTON -->
+    <button type="button"
+            class="btn btn-secondary mt-2"
+            onclick="addDetailSection()">
+        + Add Detail Section
+    </button>
+
+
+
+
+    <!-- ========================= SUBMIT BUTTON ========================= -->
+    <div class="mt-4">
+        <button class="btn btn-primary">Add Product</button>
+    </div>
+
+</form>
+
+
+
+
+<!-- ================================================================ -->
+<!-- ======================= SCRIPTS ================================ -->
+<!-- ================================================================ -->
+
+<script>
+/* ===========================================================
+   IMAGE PREVIEW
+=========================================================== */
+document.getElementById("imageInput").addEventListener("change", function () {
+    const preview = document.getElementById("previewArea");
+    preview.innerHTML = "";
+
+    [...this.files].forEach(file => {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.style = `
+            height:120px;
+            width:120px;
+            object-fit:cover;
+            border-radius:10px;
+            border:1px solid #30363d;
+        `;
+        preview.appendChild(img);
+    });
+});
+
+
+
+/* ===========================================================
+   ADD NEW DETAIL SECTION
+=========================================================== */
+function addDetailSection() {
+    let html = `
+    <div class="detail-box border rounded p-3 mb-3"
+         style="border-color:#30363d; background:#0d1117; border-radius:12px;">
+
+        <label class="form-label">Section Title</label>
+        <input type="text"
+               name="detail_title[]"
+               class="form-control mb-2"
+               placeholder="Example: Features">
+
+        <label class="form-label">Items (One per line)</label>
+        <textarea name="detail_items[]"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Durable&#10;Lightweight&#10;Eco friendly"></textarea>
+
+        <button type="button"
+                class="btn btn-danger btn-sm mt-2"
+                onclick="this.parentElement.remove()">
+            Delete Section
+        </button>
+
+    </div>`;
+    
+    document.getElementById("detailsContainer")
+            .insertAdjacentHTML("beforeend", html);
+}
+</script>
+
+{% endblock %}

@@ -1,32 +1,114 @@
 import os
 from dotenv import load_dotenv
 
-# -------------------------------------------------------------
-# Load environment variables from a .env file (if present)
-# Makes sensitive data like SECRET_KEY and DB URI configurable
-# without hard-coding them in source code.
-# -------------------------------------------------------------
+# Load environment variables from .env
 load_dotenv()
 
 
-class DevelopmentConfig:
+# ================================================================
+# BASE CONFIG (used by ALL environments)
+# ================================================================
+class Config:
     """
-    Configuration class used during development.
-
-    Values are loaded from environment variables so you can keep:
-      - secret keys
-      - database URIs
-      - API tokens
-    outside your source code repository.
+    Base configuration class.
+    Shared settings for both Development and Production.
     """
 
-    # Enable Flask debugging (auto reload + detailed error pages)
+    # -----------------------------
+    # Flask core settings
+    # -----------------------------
+    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "unsafe-dev-key")
+
+    DEBUG = False  # Production default
+
+    # -----------------------------
+    # MongoDB
+    # -----------------------------
+    MONGO_URI = os.getenv("MONGO_URI")
+    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "timeless_threads")
+
+    # -----------------------------
+    # Admin seed credentials
+    # -----------------------------
+    ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+    # -----------------------------
+    # Ads System
+    # -----------------------------
+    ADS_SYSTEM_ENABLED = (
+        os.getenv("ADS_SYSTEM_ENABLED", "true").lower() == "true"
+    )
+
+    # Default ad slot for fallbacks
+    ADS_DEFAULT_SLOT = "homepage_hero"
+
+    # -----------------------------
+    # External microservices (DCORP)
+    # -----------------------------
+    DCORP_API_URL = os.getenv("DCORP_API_URL")
+
+    # -----------------------------
+    # Cookie & Security Settings
+    # -----------------------------
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = True  # Force HTTPS cookies in production
+
+    # Optional: security headers (can be added via middleware)
+    ENABLE_SECURITY_HEADERS = True
+
+
+# ================================================================
+# DEVELOPMENT CONFIG
+# ================================================================
+class DevelopmentConfig(Config):
+    """
+    Development environment:
+    - Debug enabled
+    - Uses local fallbacks
+    """
+
     DEBUG = True
 
-    # Secret key for session signing & CSRF protection
-    # Stored in .env as FLASK_SECRET_KEY
-    SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+    # More permissive session handling in dev
+    SESSION_COOKIE_SECURE = False
 
-    # MongoDB connection URI
-    # Stored in .env as MONGO_URI
-    MONGO_URI = os.getenv("MONGO_URI")
+    # Fallback secrets for local dev
+    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
+
+    # Local MongoDB fallback
+    MONGO_URI = os.getenv(
+        "MONGO_URI",
+        "mongodb://localhost:27017/timeless_threads"
+    )
+
+    # Local DCORP backend (Dev mode)
+    DCORP_API_URL = os.getenv("DCORP_API_URL", "http://localhost:5000")
+
+
+# ================================================================
+# PRODUCTION CONFIG
+# ================================================================
+class ProductionConfig(Config):
+    """
+    Production environment:
+    - Debug disabled
+    - Requires proper env variables
+    """
+
+    DEBUG = False
+
+    # Production requires strict cookies
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+    # Fail-safe: prevent starting without essential configs
+    if not os.getenv("FLASK_SECRET_KEY"):
+        raise RuntimeError("❌ Missing FLASK_SECRET_KEY in environment!")
+
+    if not os.getenv("MONGO_URI"):
+        raise RuntimeError("❌ Missing MONGO_URI in environment!")
+
+    if not os.getenv("DCORP_API_URL"):
+        raise RuntimeError("❌ Missing DCORP_API_URL in environment!")

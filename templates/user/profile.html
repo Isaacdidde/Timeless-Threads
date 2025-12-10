@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% block styles %}
+<style>
+    .page-title {
+        font-weight: 700;
+        font-size: 26px;
+    }
+
+    .profile-card {
+        background: #fff;
+        padding: 22px;
+        border-radius: 14px;
+        box-shadow: 0 5px 18px rgba(0,0,0,0.07);
+    }
+
+    .nav-tabs .nav-link {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .nav-tabs .nav-link.active {
+        background: #0d6efd !important;
+        color: #fff !important;
+    }
+
+    .profile-image {
+        border-radius: 10px;
+        object-fit: cover;
+    }
+</style>
+{% endblock %}
+
+<h2 class="page-title mb-4">My Profile</h2>
+
+<div class="profile-card">
+
+    <!-- ==============================================
+         NAV TABS
+    =============================================== -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#info">Profile</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#password">Password</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#address">Address</a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- =====================================================
+             PROFILE TAB
+        ====================================================== -->
+        <div class="tab-pane fade show active" id="info">
+
+            <form action="{{ url_for('user.update_profile') }}"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                <div class="mb-3">
+                    <label class="fw-semibold">Full Name</label>
+                    <input type="text"
+                           name="name"
+                           class="form-control"
+                           value="{{ user.name }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="fw-semibold">Email (read-only)</label>
+                    <input type="text"
+                           class="form-control"
+                           value="{{ user.email }}"
+                           readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="fw-semibold">Mobile Number</label>
+                    <input type="text"
+                           name="mobile"
+                           class="form-control"
+                           value="{{ user.mobile }}"
+                           minlength="10"
+                           maxlength="10"
+                           pattern="[0-9]{10}"
+                           required>
+                </div>
+
+                <!-- Profile Image -->
+                <div class="mb-3">
+                    <label class="fw-semibold">Profile Image</label><br>
+
+                    {% if user.profile_image %}
+                        <img src="{{ url_for('static', filename='uploads/profile/' ~ user.profile_image) }}"
+                             class="profile-image mb-2"
+                             height="80">
+                    {% else %}
+                        <p class="text-muted small mb-1">No image uploaded</p>
+                    {% endif %}
+
+                    <input type="file"
+                           name="image"
+                           class="form-control"
+                           accept="image/*">
+                </div>
+
+                <button class="btn btn-primary">
+                    Update Profile
+                </button>
+
+            </form>
+        </div>
+
+        <!-- =====================================================
+             PASSWORD TAB
+        ====================================================== -->
+        <div class="tab-pane fade" id="password">
+
+            <form action="{{ url_for('user.update_password') }}" method="post">
+
+                <div class="mb-3">
+                    <label class="fw-semibold">Current Password</label>
+                    <input type="password"
+                           name="old_password"
+                           class="form-control"
+                           minlength="6"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="fw-semibold">New Password</label>
+                    <input type="password"
+                           name="new_password"
+                           class="form-control"
+                           minlength="6"
+                           required>
+                </div>
+
+                <button class="btn btn-warning">
+                    Update Password
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- =====================================================
+             ADDRESS TAB
+        ====================================================== -->
+        <div class="tab-pane fade" id="address">
+
+            <h5 class="fw-bold mb-3">Saved Address</h5>
+
+            {% if user.address %}
+                <div class="border rounded p-3 mb-3">
+                    <strong>{{ user.address.house }}</strong><br>
+                    {{ user.address.street }}<br>
+                    {{ user.address.city }}, {{ user.address.state }} - {{ user.address.pincode }}
+                </div>
+            {% else %}
+                <p class="text-muted">No address added yet.</p>
+            {% endif %}
+
+            <hr class="my-4">
+
+            <h5 class="fw-bold">Add / Update Address</h5>
+
+            <form action="{{ url_for('user.save_address') }}" method="post">
+
+                <div class="mb-2">
+                    <input type="text"
+                           name="house"
+                           class="form-control"
+                           placeholder="House / Flat No."
+                           required>
+                </div>
+
+                <div class="mb-2">
+                    <input type="text"
+                           name="street"
+                           class="form-control"
+                           placeholder="Street / Area">
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col">
+                        <input type="text"
+                               name="city"
+                               class="form-control"
+                               placeholder="City"
+                               required>
+                    </div>
+                    <div class="col">
+                        <input type="text"
+                               name="state"
+                               class="form-control"
+                               placeholder="State"
+                               required>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <input type="text"
+                           name="pincode"
+                           class="form-control"
+                           placeholder="Pincode"
+                           minlength="6"
+                           maxlength="6"
+                           pattern="[0-9]{6}"
+                           required>
+                </div>
+
+                <button class="btn btn-success mt-2">
+                    Save Address
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

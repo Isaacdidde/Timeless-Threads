@@ -1,24 +1,32 @@
+# app.py
+
 from app_factory import AppFactory
 
-# -------------------------------------------------------------
-# Application Entry Point (Production + Development)
-# -------------------------------------------------------------
-# This file must expose a top-level variable named `app`
-# so Gunicorn (Render) can import it using: gunicorn app:app
-# -------------------------------------------------------------
+"""
+============================================================
+ Production Entry Point for Timeless Threads
+------------------------------------------------------------
+• Gunicorn will import:  app = factory.create_app()
+• Local development uses the __main__ block.
+• Context processors are already loaded inside AppFactory,
+  so no need to call them again here.
+============================================================
+"""
 
-# Create the factory and initialize the Flask application
+# -------------------------------------------------------------
+# CREATE APPLICATION (used by Gunicorn / Render)
+# -------------------------------------------------------------
 factory = AppFactory()
-app = factory.create_app()   # <-- Gunicorn needs THIS
+app = factory.create_app()     # Gunicorn loads this:  gunicorn app:app
 
 
 # -------------------------------------------------------------
-# Development server (only runs in local development)
+# LOCAL DEVELOPMENT SERVER
 # -------------------------------------------------------------
 if __name__ == "__main__":
-    # Local development server only
+    # Running locally with Flask's development server
     app.run(
-        debug=app.config.get("DEBUG", True),
         host="0.0.0.0",
-        port=5000
+        port=5001,
+        debug=app.config.get("DEBUG", True)
     )

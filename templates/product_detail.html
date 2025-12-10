@@ -1,300 +1,451 @@
 {% extends "base.html" %}
-{% block content %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/product_detail.css') }}">
+<style>
+    .fade { opacity: 0; transition: opacity .18s ease; }
+    .bar-track { background:#eee; border-radius:4px; height:7px; overflow:hidden; }
+    .bar-fill { background:#f2b01e; height:100%; border-radius:4px; }
+    .edit-star.active, .new-star.active { color:#f2b01e !important; }
+</style>
 {% endblock %}
 
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer" />
+{% block content %}
+
+{% set current_user = session.get('user_name') or session.get('user') %}
+{% set img_prefix = 'uploads/products/' %}
+{% set images = product.__images if product.__images is defined else (product.get('images') or []) %}
+{% if not images or images is string %}
+    {% set images = ['no_image.jpg'] %}
+{% endif %}
 
 <div class="container luxury">
-  <div class="lux-row">
 
-    <!-- ========================= LEFT SIDE (GALLERY) ========================= -->
-    <div class="lux-left">
-      <div class="gallery-card">
+    <div class="lux-row">
 
-        <div class="gallery-main" id="galleryMain">
-          <img id="mainImage"
-               src="{{ url_for('static', filename='images/products/' ~ product.image) }}">
-          <button class="gallery-nav gallery-prev" id="btnPrev">❮</button>
-          <button class="gallery-nav gallery-next" id="btnNext">❯</button>
+        <!-- ============================================================
+             LEFT: PRODUCT GALLERY
+        ============================================================ -->
+        <div class="lux-left">
+            <div class="gallery-card">
+
+                <div class="gallery-main" id="galleryMain">
+                    <img id="mainImage"
+                         src="{{ url_for('static', filename=img_prefix ~ images[0]) }}"
+                         alt="{{ product.name }}">
+                    <button id="btnPrev" class="gallery-nav" style="left:12px;">❮</button>
+                    <button id="btnNext" class="gallery-nav" style="right:12px;">❯</button>
+                </div>
+
+                <div class="thumb-row mt-3">
+                    {% for img in images %}
+                    <img class="thumb {% if loop.first %}active{% endif %}"
+                         src="{{ url_for('static', filename=img_prefix ~ img) }}"
+                         data-src="{{ url_for('static', filename=img_prefix ~ img) }}">
+                    {% endfor %}
+                </div>
+
+            </div>
         </div>
 
-        <div class="thumb-row">
-          {% set images = [] %}
-          {% if product.image %}  {% set images = images + [product.image] %}  {% endif %}
-          {% if product.image2 %} {% set images = images + [product.image2] %} {% endif %}
-          {% if product.image3 %} {% set images = images + [product.image3] %} {% endif %}
+        <!-- ============================================================
+             RIGHT: PRODUCT DETAILS
+        ============================================================ -->
+        <div class="lux-right">
+            <div class="product-card">
 
-          {% for img in images %}
-            <img class="thumb {% if loop.first %}active{% endif %}"
-                 src="{{ url_for('static', filename='images/products/' ~ img) }}">
-          {% endfor %}
+                <div class="prod-title">{{ product.name }}</div>
+
+                <!-- PRICE -->
+                <div class="price-row">
+                    <div class="price-current">₹{{ product.price }}</div>
+
+                    {% if mrp %}
+                    <div class="price-mrp">₹{{ mrp }}</div>
+                    <div class="price-save">Save ₹{{ mrp - product.price }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- SIZES -->
+                {% set sizes = product.get("sizes") or [] %}
+                {% if sizes %}
+                <div class="section-title mt-2">Select Size</div>
+                <div id="sizeList">
+                    {% for s in sizes %}
+                    <span class="size-pill" data-size="{{ s }}">{{ s }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- COLORS -->
+                {% set colors = product.get("colors") or [] %}
+                {% if colors %}
+                <div class="section-title mt-3">Select Color</div>
+                <div id="colorList">
+                    {% for c in colors %}
+                    <span class="color-dot"
+                          data-color="{{ c }}"
+                          style="background: {{ c }};">
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- ADD TO CART FORM -->
+                <form method="POST"
+                      action="{{ url_for('cart.add_to_cart', product_id=product._id|string) }}"
+                      class="mt-3">
+
+                    <input type="hidden" id="selectedSize" name="selected_size">
+                    <input type="hidden" id="selectedColor" name="selected_color">
+
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="number"
+                               class="form-control"
+                               name="quantity"
+                               value="1"
+                               min="1"
+                               style="width:90px;">
+                        <button id="addBtn" class="add-btn" disabled>ADD TO CART</button>
+                    </div>
+                </form>
+
+                <!-- SPECIFICATIONS -->
+                {% if product.details %}
+                <div class="section-title mt-4">Specifications</div>
+
+                {% set icon_map = {
+                    'fabric':'fa-shirt','material':'fa-layer-group','wash':'fa-water',
+                    'fit':'fa-person','size':'fa-ruler','style':'fa-star','care':'fa-soap',
+                    'type':'fa-tag','pattern':'fa-clipboard-check','color':'fa-palette'
+                } %}
+
+                {% for sec in product.details %}
+                <div class="detail-section">
+
+                    <button class="detail-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa {{ icon_map.get(sec.title|lower, 'fa-circle-info') }}"></i>
+                            <strong>{{ sec.title }}</strong>
+                        </div>
+                        <i class="fa fa-chevron-down"></i>
+                    </button>
+
+                    <div class="detail-body">
+                        <ul class="spec-list">
+                            {% for item in sec.get("items", []) %}
+                            <li><span class="badge border bg-light">{{ item }}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                </div>
+                {% endfor %}
+                {% endif %}
+
+            </div>
         </div>
 
-      </div>
     </div>
 
-    <!-- ========================= RIGHT SIDE DETAIL CARD ========================= -->
-    <div class="lux-right">
-      <div class="product-card">
 
-        <div class="prod-title">{{ product.name }}</div>
-
-        {% if avg_rating %}
-        <div class="mt-2">
-          <span class="pd-rating-badge">{{ avg_rating }} ★</span>
-          <small class="ms-2 text-muted">{{ review_count }} reviews</small>
-        </div>
-        {% endif %}
-
-        <div class="price-row">
-          <div class="price-current">₹{{ product.price }}</div>
-
-          {% if mrp %}
-          <div class="price-mrp">₹{{ mrp }}</div>
-          <div class="price-save">Save ₹{{ mrp - product.price }}</div>
-          {% endif %}
-        </div>
-
-        <p class="text-muted mt-2">{{ product.description or '' }}</p>
-
-        <!-- ================= SIZE & COLOR SELECTORS ================= -->
-        {% if product.category != "cosmetics" %}
-
-          {% if product.sizes %}
-          <div class="section-title mt-3">Select Size</div>
-          <div class="selector-row" id="sizeList">
-            {% for s in product.sizes %}
-            <div class="size-pill" data-size="{{ s }}">{{ s }}</div>
-            {% endfor %}
-          </div>
-          {% endif %}
-
-          {% if product.colors %}
-          <div class="section-title mt-3">Colors</div>
-          <div class="selector-row" id="colorList">
-            {% for c in product.colors %}
-            <div class="color-dot"
-                 style="background: {{ c }};"
-                 data-color="{{ c }}"></div>
-            {% endfor %}
-          </div>
-          {% endif %}
-
-        {% endif %}
-
-        <!-- ================= ADD TO CART ================= -->
-        <form action="{{ url_for('product.add_to_cart') }}" method="POST">
-          <input type="hidden" name="product_id" value="{{ product._id|string }}">
-          <input type="hidden" name="selected_size" id="selectedSize">
-          <input type="hidden" name="selected_color" id="selectedColor">
-
-          <div class="add-row">
-            <input type="number" class="form-control" name="quantity"
-                   value="1" min="1" style="width:90px;">
-            <button class="add-btn" id="addBtn" disabled>ADD TO CART</button>
-          </div>
-        </form>
-
-        <!-- ================= Highlights ================= -->
-        {% if product.highlights %}
-        <div class="section-title mt-4">Product Highlights</div>
-        <ul class="highlights">
-          {% for h in product.highlights %}
-          <li>⭐ {{ h }}</li>
-          {% endfor %}
-        </ul>
-        {% endif %}
-
-        <!-- ================= Specifications ================= -->
-        {% if product.details %}
-        <div class="section-title mt-4">Specifications</div>
-        <table class="table specs-table">
-          <tbody>
-            {% for k, v in product.details.items() %}
-            <tr>
-              <th>{{ k }}</th>
-              <td>{{ v }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% endif %}
-
-      </div>
+    <!-- ============================
+         PRODUCT DETAIL BANNER AD
+    ============================ -->
+    {% if ads.product_detail_banner %}
+    <div class="mt-4">
+        {% with ad = ads.product_detail_banner %}
+            {% include "ads/inject_ad_slot.html" %}
+        {% endwith %}
     </div>
-
-  </div>
-</div>
-
-<!-- =======================================================================
-     REVIEWS SECTION
-======================================================================= -->
-<div class="container luxury mt-5">
-  <div class="reviews-block">
-
-    <h3 class="section-title">Customer Reviews</h3>
-
-    {% set seen_users = [] %}
-    {% set counts = [0,0,0,0,0] %}
-
-    {% for r in reviews %}
-      {% set rating_value = r["rating"] | int %}
-      {% if 1 <= rating_value <= 5 %}
-        {% if r["user"] not in seen_users %}
-          {% set index = rating_value - 1 %}
-          {% set counts = counts[:index] + [counts[index] + 1] + counts[index+1:] %}
-          {% set seen_users = seen_users + [r["user"]] %}
-        {% endif %}
-      {% endif %}
-    {% endfor %}
-
-    {% set total = counts | sum %}
-
-    <div class="breakdown mt-3">
-      <div class="avg">
-        <div class="value">{{ avg_rating or 0 }}</div>
-        <div class="small-muted">{{ total }} review{{ 's' if total != 1 }}</div>
-      </div>
-
-      <div style="flex:1">
-        {% for star in range(5,0,-1) %}
-        {% set idx = star - 1 %}
-        {% set cnt = counts[idx] %}
-        {% set pct = total > 0 and ((cnt * 100) / total) or 0 %}
-        <div class="bar-row">
-          <div>{{ star }}★</div>
-          <div class="bar-track">
-            <div class="bar-fill" data-pct="{{ pct }}"></div>
-          </div>
-          <div style="width:40px; text-align:right;">{{ cnt }}</div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- ================= Review List ================= -->
-    {% set shown_users = [] %}
-    {% for r in reviews %}
-      {% if r["user"] not in shown_users %}
-
-      <div class="review-card mt-3" id="review-{{ r['_id'] }}">
-
-        <div style="max-width:80%;">
-          <span class="review-user">{{ r["user"] }}</span>
-          <span class="review-stars">{{ r["rating"] }} ★</span>
-
-          <div class="text-muted" style="font-size:12px;">
-            {% if r.get("updated_at") %}
-              Updated {{ r["updated_at"].strftime('%Y-%m-%d') }}
-            {% elif r.get("created_at") %}
-              Posted {{ r["created_at"].strftime('%Y-%m-%d') }}
-            {% endif %}
-          </div>
-
-          <p class="mt-2">{{ r["review"] }}</p>
-        </div>
-
-        {% if session.get('user') == r["user"] %}
-        <div>
-          <button class="btn btn-outline-primary btn-sm edit-btn"
-                  data-id="{{ r['_id'] }}">Edit</button>
-
-          <form action="{{ url_for('review.delete_review',
-                    review_id=r['_id']|string,
-                    product_id=product._id|string) }}"
-                method="POST"
-                style="display:inline;">
-            <button class="btn btn-outline-danger btn-sm">Delete</button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-
-      <div class="review-edit" id="edit-{{ r['_id'] }}">
-        <form method="POST"
-              action="{{ url_for('review.add_review',
-                                 product_id=product._id|string) }}">
-
-          <input type="hidden" name="review_id" value="{{ r['_id']|string }}">
-          <input type="hidden" name="rating"
-                 class="edit-rating"
-                 value="{{ r['rating'] | int }}">
-
-          <div class="star-row edit-stars">
-            {% for s in range(1,6) %}
-            <i class="fa fa-star edit-star {% if s <= (r['rating']|int) %}active{% endif %}"
-               data-value="{{ s }}"></i>
-            {% endfor %}
-          </div>
-
-          <textarea name="review" class="form-control mt-2"
-                    rows="3">{{ r["review"] }}</textarea>
-
-          <div class="mt-2">
-            <button type="submit" class="btn btn-dark btn-sm">Save</button>
-            <button type="button"
-                    class="btn btn-secondary btn-sm cancel-edit"
-                    data-id="{{ r['_id'] }}">Cancel</button>
-          </div>
-        </form>
-      </div>
-
-      {% set shown_users = shown_users + [r["user"]] %}
-      {% endif %}
-    {% endfor %}
-
-    <!-- ================= Add New Review ================= -->
-    {% if session.get('user') %}
-
-      {% set user_review = None %}
-      {% for rr in reviews %}
-        {% if rr["user"] == session.get('user') %}
-          {% set user_review = rr %}
-        {% endif %}
-      {% endfor %}
-
-      {% if not user_review %}
-      <form method="POST"
-            class="review-form mt-4"
-            action="{{ url_for('review.add_review',
-                               product_id=product._id|string) }}">
-
-        <label>Your Rating</label>
-        <div class="star-row new-stars mt-1">
-          {% for s in range(1,6) %}
-          <i class="fa fa-star new-star" data-value="{{ s }}"></i>
-          {% endfor %}
-        </div>
-
-        <input type="hidden" name="rating" id="newRating" required>
-
-        <label class="mt-2">Write a Review</label>
-        <textarea name="review" class="form-control"
-                  rows="4" required></textarea>
-
-        <div class="mt-2">
-          <button class="btn btn-dark">Submit Review</button>
-        </div>
-      </form>
-
-      {% else %}
-      <p class="text-muted mt-4">
-        You already reviewed this product. Use Edit above.
-      </p>
-      {% endif %}
     {% endif %}
 
-  </div>
+
+
+    <!-- ============================================================
+         REVIEWS BLOCK
+    ============================================================ -->
+    <div class="reviews-block mt-5">
+
+        <h3 class="section-title fw-bold">Customer Reviews</h3>
+
+        {% set seen = [] %}
+        {% set counts = [0,0,0,0,0] %}
+
+        {% for r in reviews %}
+            {% set rt = (r.rating or 0)|int %}
+            {% set user_key = r.get('user') or r.get('user_name') %}
+
+            {% if 1 <= rt <= 5 and user_key and user_key not in seen %}
+                {% set counts = counts[:rt-1] + [counts[rt-1] + 1] + counts[rt:] %}
+                {% set seen = seen + [user_key] %}
+            {% endif %}
+        {% endfor %}
+
+        {% set total_unique = counts|sum %}
+
+        <!-- Rating Breakdown -->
+        <div class="breakdown mt-3">
+            <div class="avg">
+                <div class="fs-1 fw-bold">{{ avg_rating or "0.0" }}</div>
+                <div class="text-muted small">{{ review_count }} reviews</div>
+            </div>
+
+            <div class="flex-grow-1 ms-4">
+                {% for star in range(5,0,-1) %}
+                {% set idx = star - 1 %}
+                {% set pct = total_unique and (counts[idx] * 100 / total_unique) or 0 %}
+                <div class="d-flex align-items-center mb-2 gap-2">
+                    <div style="width:40px;">{{ star }}★</div>
+                    <div class="bar-track"><div class="bar-fill" style="width:{{ pct }}%"></div></div>
+                    <div style="width:36px; text-align:right;">{{ counts[idx] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <!-- Review Cards -->
+        <div class="mt-4">
+            {% for r in reviews %}
+            <div class="review-card d-flex justify-content-between mb-3">
+
+                <div class="flex-grow-1 me-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <strong>{{ r.get('user') or r.get('user_name') }}</strong>
+                        <span class="text-warning">{{ r.rating }} ★</span>
+                    </div>
+
+                    <div class="text-muted small">
+                        {% if r.updated_at %}
+                            Updated {{ r.updated_at.strftime("%Y-%m-%d") }}
+                        {% else %}
+                            Posted {{ r.created_at.strftime("%Y-%m-%d") }}
+                        {% endif %}
+                    </div>
+
+                    <p class="mt-2">{{ r.review }}</p>
+                </div>
+
+                {% if current_user == (r.get('user') or r.get('user_name')) %}
+                <div>
+                    <button class="btn btn-outline-primary btn-sm edit-btn" data-id="{{ r['_id'] }}">Edit</button>
+
+                    <form method="POST"
+                          action="{{ url_for('review.delete_review',
+                                             review_id=r['_id']|string,
+                                             product_id=product._id|string) }}"
+                          style="display:inline;">
+                        <button class="btn btn-outline-danger btn-sm">Delete</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Hidden Edit Form -->
+            <div class="review-edit" id="edit-{{ r['_id'] }}" style="display:none;">
+                <form method="POST"
+                      action="{{ url_for('review.add_review', product_id=product._id|string) }}">
+
+                    <input type="hidden" name="review_id" value="{{ r['_id']|string }}">
+                    <input type="hidden" class="edit-rating" name="rating" value="{{ r.rating }}">
+
+                    <div class="mb-2">
+                        {% for s in range(1,6) %}
+                        <i class="fa fa-star edit-star {% if s <= r.rating %}active{% endif %}"
+                           data-value="{{ s }}"
+                           style="cursor:pointer; margin-right:6px;"></i>
+                        {% endfor %}
+                    </div>
+
+                    <textarea name="review" class="form-control">{{ r.review }}</textarea>
+
+                    <div class="mt-2">
+                        <button class="btn btn-dark btn-sm">Save</button>
+                        <button type="button" class="btn btn-secondary btn-sm cancel-edit" data-id="{{ r['_id'] }}">Cancel</button>
+                    </div>
+
+                </form>
+            </div>
+
+            {% endfor %}
+        </div>
+
+        <!-- Write Review -->
+        {% if current_user %}
+            {% set user_has_review = reviews | selectattr("user_name", "equalto", current_user) | list | length > 0 %}
+            {% if not user_has_review %}
+            <form method="POST"
+                  action="{{ url_for('review.add_review', product_id=product._id|string) }}"
+                  class="mt-4 p-3 border rounded">
+
+                <h5 class="fw-bold">Write a Review</h5>
+
+                <label>Your rating</label>
+                <div class="mt-1 mb-2">
+                    {% for s in range(1,6) %}
+                    <i class="fa fa-star new-star"
+                       data-value="{{ s }}"
+                       style="cursor:pointer; font-size:22px; margin-right:6px;"></i>
+                    {% endfor %}
+                </div>
+
+                <input type="hidden" id="newRating" name="rating" required>
+
+                <label>Your review</label>
+                <textarea name="review" rows="4" class="form-control" required></textarea>
+
+                <button class="btn btn-dark mt-3">Submit Review</button>
+
+            </form>
+            {% endif %}
+        {% else %}
+        <p class="text-muted mt-3">
+            Please <a href="{{ url_for('auth.login') }}">login</a> to write a review.
+        </p>
+        {% endif %}
+
+    </div>
 </div>
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/product_detail.js') }}"></script>
 {% endblock %}
 
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const $ = s => document.querySelector(s);
+    const $$ = s => [...document.querySelectorAll(s)];
+
+    /* -----------------------------
+       PRODUCT GALLERY
+    ------------------------------*/
+    const mainImg = $("#mainImage");
+    const thumbs = $$(".thumb");
+    let idx = 0;
+
+    const getList = () => thumbs.map(t => t.dataset.src || t.src);
+
+    function show(i){
+        const list = getList();
+        if(!list.length) return;
+
+        idx = (i + list.length) % list.length;
+        mainImg.classList.add("fade");
+        setTimeout(() => {
+            mainImg.src = list[idx];
+            mainImg.classList.remove("fade");
+        }, 150);
+
+        thumbs.forEach((t,n)=> t.classList.toggle("active", n===idx));
+    }
+
+    $("#btnPrev")?.addEventListener("click",()=>show(idx-1));
+    $("#btnNext")?.addEventListener("click",()=>show(idx+1));
+
+    thumbs.forEach((t,n)=>t.addEventListener("click",()=>show(n)));
+
+    setInterval(()=>show(idx+1), 4000);
+
+
+    /* -----------------------------
+       VARIANT SELECTION
+    ------------------------------*/
+    const sizeIn = $("#selectedSize");
+    const colorIn = $("#selectedColor");
+    const addBtn = $("#addBtn");
+
+    function validate(){
+        const needSize = $$(".size-pill").length > 0;
+        const needColor = $$(".color-dot").length > 0;
+
+        addBtn.disabled = !(
+            (!needSize || sizeIn.value) &&
+            (!needColor || colorIn.value)
+        );
+    }
+
+    $$(".size-pill").forEach(el=>{
+        el.addEventListener("click",()=>{
+            $$(".size-pill").forEach(x=>x.classList.remove("active"));
+            el.classList.add("active");
+            sizeIn.value = el.dataset.size;
+            validate();
+        });
+    });
+
+    $$(".color-dot").forEach(el=>{
+        el.addEventListener("click",()=>{
+            $$(".color-dot").forEach(x=>x.classList.remove("active"));
+            el.classList.add("active");
+            colorIn.value = el.dataset.color;
+            validate();
+        });
+    });
+
+    validate();
+
+
+    /* -----------------------------
+       DETAILS ACCORDION
+    ------------------------------*/
+    $$(".detail-header").forEach(h=>{
+        h.addEventListener("click",()=>{
+            const body = h.nextElementSibling;
+            const icon = h.querySelector(".fa-chevron-down");
+            const open = !body.classList.contains("open");
+            body.classList.toggle("open",open);
+            icon?.classList.toggle("rotate",open);
+        });
+    });
+
+    /* -----------------------------
+       REVIEW: New stars
+    ------------------------------*/
+    $$(".new-star").forEach(star=>{
+        star.addEventListener("click",()=>{
+            let v = parseInt(star.dataset.value);
+            $("#newRating").value = v;
+            $$(".new-star").forEach(s=>{
+                s.classList.toggle("active", parseInt(s.dataset.value)<=v);
+            });
+        });
+    });
+
+    /* -----------------------------
+       REVIEW: Edit button toggles
+    ------------------------------*/
+    $$(".edit-btn").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+            const id = btn.dataset.id;
+            const box = $("#edit-"+id);
+            if(box) box.style.display="block";
+        });
+    });
+
+    $$(".cancel-edit").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+            const id = btn.dataset.id;
+            const box = $("#edit-"+id);
+            if(box) box.style.display="none";
+        });
+    });
+
+    /* -----------------------------
+       REVIEW: Edit stars
+    ------------------------------*/
+    $$(".edit-star").forEach(star=>{
+        star.addEventListener("click",()=>{
+            const rating = parseInt(star.dataset.value);
+            const box = star.closest(".review-edit");
+            const input = box.querySelector(".edit-rating");
+            input.value = rating;
+
+            box.querySelectorAll(".edit-star").forEach(s=>{
+                s.classList.toggle("active", parseInt(s.dataset.value)<=rating);
+            });
+        });
+    });
+
+});
+</script>
 {% endblock %}

@@ -1,0 +1,113 @@
+{# templates/ads/inline_ad.html — Compact universal inline ad #}
+
+{% if ad %}
+<div class="inline-ad-card shadow-sm"
+     style="
+        display:flex;
+        gap:14px;
+        background:#fff;
+        border-radius:12px;
+        padding:12px;
+        align-items:center;
+        border:1px solid #eee;
+     ">
+
+    <a href="{{ ad.get('redirect_url') or '#' }}"
+       target="_blank"
+       class="tt-ad-link-inline-gen"
+       data-campaign-id="{{ ad.get('campaign_id') }}"
+       data-slot-id="{{ ad.get('slot_id') }}"
+       style="text-decoration:none; color:inherit; display:flex; align-items:center; width:100%;">
+
+        <!-- Image Section -->
+        <div style="
+            width:95px;
+            height:95px;
+            flex-shrink:0;
+            overflow:hidden;
+            border-radius:10px;
+        ">
+            <img src="{{ ad.get('image_url') }}"
+                 alt="{{ ad.get('headline') or 'Sponsored' }}"
+                 class="tt-inline-gen-img"
+                 loading="lazy"
+                 style="
+                    width:100%;
+                    height:100%;
+                    object-fit:cover;
+                 ">
+        </div>
+
+        <!-- Text Section -->
+        <div style="flex:1; padding-left:6px;">
+            <div class="fw-semibold text-dark text-truncate" style="font-size:15px;">
+                {{ ad.get('headline') or 'Sponsored' }}
+            </div>
+
+            {% if ad.get('description') %}
+            <div class="text-muted text-truncate" style="font-size:13px;">
+                {{ ad.get('description') }}
+            </div>
+            {% endif %}
+        </div>
+
+    </a>
+</div>
+
+
+<script>
+(function () {
+  try {
+    // ⭐ Always track from DCORP backend
+    const root = "http://127.0.0.1:5000";
+
+    const wrapper = document.currentScript.previousElementSibling;
+    if (!wrapper) return;
+
+    const link = wrapper.querySelector(".tt-ad-link-inline-gen");
+    const img  = wrapper.querySelector(".tt-inline-gen-img");
+
+    if (!link) return;
+
+    const campaignId = link.dataset.campaignId || null;
+    const slot       = link.dataset.slotId || null;
+
+    if (!campaignId || !slot) return;
+
+    // ------------------------------------
+    // IMPRESSION TRACK
+    // ------------------------------------
+    function sendImpression() {
+      fetch(`${root}/api/ads/track/impression`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: campaignId, slot_id: slot })
+      }).catch(() => {});
+    }
+
+    if (img) {
+      if (img.complete) {
+        sendImpression();
+      } else {
+        img.addEventListener("load", sendImpression);
+      }
+    }
+
+    // ------------------------------------
+    // CLICK TRACK
+    // ------------------------------------
+    link.addEventListener("click", () => {
+      fetch(`${root}/api/ads/track/click`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: campaignId, slot_id: slot })
+      }).catch(() => {});
+    });
+
+  } catch (err) {
+    console.error("inline ad tracking error:", err);
+  }
+})();
+</script>
+
+{% endif %}

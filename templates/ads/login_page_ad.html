@@ -1,0 +1,89 @@
+{# templates/ads/login_page_ad.html — clean login-page ad block #}
+
+{% if ad %}
+<div class="login-ad-container"
+     style="max-width:520px; margin:20px auto; text-align:center;">
+
+    <a href="{{ ad.get('redirect_url') or '#' }}"
+       target="_blank"
+       class="tt-login-ad-link"
+       data-campaign-id="{{ ad.get('campaign_id') }}"
+       data-slot-id="{{ ad.get('slot_id') }}"
+       style="display:block; border-radius:12px; overflow:hidden;">
+
+        <img src="{{ ad.get('image_url') }}"
+             alt="{{ ad.get('headline') or 'Advertisement' }}"
+             class="tt-login-ad-img"
+             loading="lazy"
+             style="width:100%; height:auto; display:block;">
+    </a>
+
+    {% if ad.get('headline') %}
+    <p style="margin-top:10px; font-weight:600; color:#333;">
+        {{ ad.get('headline') }}
+    </p>
+    {% endif %}
+</div>
+
+
+<script>
+(function () {
+    try {
+        // ⭐ ALWAYS track impressions/clicks against DCORP backend
+        const root = "http://127.0.0.1:5000";
+
+        const container = document.currentScript.previousElementSibling;
+        if (!container) return;
+
+        const link = container.querySelector(".tt-login-ad-link");
+        const img  = container.querySelector(".tt-login-ad-img");
+
+        if (!link) return;
+
+        // Correct dataset names
+        const campaignId = link.dataset.campaignId || null;
+        const slotId     = link.dataset.slotId || null;
+
+        if (!campaignId || !slotId) return;
+
+        // -----------------------------
+        // IMPRESSION TRACKING
+        // -----------------------------
+        function sendImpression() {
+            fetch(`${root}/api/ads/track/impression`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                }),
+            }).catch(() => {});
+        }
+
+        // If image already loaded → track immediately
+        if (img) {
+            img.complete
+                ? sendImpression()
+                : img.addEventListener("load", sendImpression);
+        }
+
+        // -----------------------------
+        // CLICK TRACKING
+        // -----------------------------
+        link.addEventListener("click", () => {
+            fetch(`${root}/api/ads/track/click`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                }),
+            }).catch(() => {});
+        });
+
+    } catch (err) {
+        console.error("login_page_ad tracking error:", err);
+    }
+})();
+</script>
+{% endif %}

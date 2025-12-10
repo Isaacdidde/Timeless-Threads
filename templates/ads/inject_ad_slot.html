@@ -1,0 +1,51 @@
+{% if ad %}
+    {% set slot = ad.get("slot_id") or ad.get("slot") or "" %}
+
+    {# ============================================================
+       CATEGORY PAGES — Special behavior
+       Slots:
+         - card_small
+         - product_inline
+    ============================================================ #}
+    {% if request.path.startswith('/category') %}
+
+        {% if slot == 'card_small' %}
+            {% include 'ads/card_ad.html' %}
+        {% elif slot == 'product_inline' %}
+            {% include 'ads/product_inline_ad.html' %}
+        {% endif %}
+
+    {% else %}
+
+        {# ========================================================
+           GLOBAL BANNER SLOTS (Homepage, Featured, Search, PDetail)
+        ========================================================= #}
+        {% if slot in [
+            'home_banner',
+            'featured_banner',
+            'product_detail_banner',
+            'search_banner'
+        ] %}
+            {% include 'ads/banner_ad.html' %}
+
+        {# ========================================================
+           INLINE AD SLOT
+        ========================================================= #}
+        {% elif slot == 'product_inline' %}
+            {% include 'ads/product_inline_ad.html' %}
+
+        {# ========================================================
+           SMALL CARD SLOT (Home + Category)
+        ========================================================= #}
+        {% elif slot == 'card_small' %}
+            {% include 'ads/card_ad.html' %}
+
+        {# ========================================================
+           DEFAULT INLINE AD (Fallback for unknown slot types)
+        ========================================================= #}
+        {% else %}
+            {% include 'ads/inline_ad.html' %}
+        {% endif %}
+
+    {% endif %}
+{% endif %}

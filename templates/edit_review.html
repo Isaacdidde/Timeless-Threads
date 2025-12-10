@@ -2,48 +2,48 @@
 {% block content %}
 
 <!-- ==========================================================
-     REVIEW EDIT PAGE
-     Allows a logged-in user to edit an existing product review.
-     Includes:
-       - Rating dropdown (1–5 stars)
-       - Review textarea
-       - Submit button
+     EDIT REVIEW PAGE
+     Allows a logged-in user to update their rating & feedback.
 ========================================================== -->
 
-<div class="container mt-5" style="max-width:600px;">
+<div class="container mt-5" style="max-width: 600px;">
 
-    <!-- Page Title -->
-    <h3>Edit Your Review</h3>
+    <!-- Heading -->
+    <h3 class="fw-bold mb-2">Edit Your Review</h3>
+    <p class="text-muted mb-3">Update your rating or feedback for this product.</p>
     <hr>
 
     <!-- ======================================================
          REVIEW EDIT FORM
-         Method: POST
-         Handled by ReviewController in your routes.
+         POST → handled by ReviewController.update_review
     ======================================================= -->
     <form method="POST">
 
         <!-- Rating Selector -->
-        <label class="fw-bold">Rating</label>
-        <select name="rating" class="form-select mb-3">
-            {% for x in range(1,6) %}
-            <option value="{{ x }}" 
-                    {% if x == review.rating %}selected{% endif %}>
+        <label class="fw-semibold mb-1">Rating</label>
+        <select name="rating" class="form-select mb-3" required>
+            {% for x in range(1, 6) %}
+            <option value="{{ x }}"
+                    {% if review and x == review.rating %}selected{% endif %}>
                 {{ x }} ★
             </option>
             {% endfor %}
         </select>
 
-        <!-- Review Textarea -->
-        <label class="fw-bold">Review</label>
-        <textarea class="form-control" 
-                  name="review" 
-                  rows="4">{{ review.review }}</textarea>
+        <!-- Review Text -->
+        <label class="fw-semibold mb-1">Your Review</label>
+        <textarea name="review"
+                  class="form-control"
+                  rows="4"
+                  placeholder="Write your thoughts…">{{ review.review | default('') }}</textarea>
 
-        <!-- Save Changes -->
-        <button class="btn btn-dark mt-3">Save Changes</button>
+        <!-- Save Button -->
+        <button class="btn btn-dark mt-3 px-4">
+            Save Changes
+        </button>
 
     </form>
+
 </div>
 
 {% endblock %}

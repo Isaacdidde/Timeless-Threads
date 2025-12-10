@@ -1,220 +1,170 @@
-from flask import session, flash, redirect, url_for, render_template
+from flask import (
+    session, flash, redirect, url_for, render_template
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
 from models.user_model import UserModel
-from models.otp_model import OTP
-from utils.otp_generator import otp_service
-import datetime
-import requests
-import os
 
 
 class AuthController:
     def __init__(self, mongo):
-        self.users = UserModel(mongo)
-        self.otps = OTP(mongo)
-        self.mongo = mongo
-
-    # =====================================================================
-    # SEND EMAIL USING RESEND API (SMTP BLOCKED ON RENDER)
-    # =====================================================================
-    def send_email(self, to_email, otp):
-        api_key = os.getenv("RESEND_API_KEY")
-        sender = os.getenv("EMAIL_FROM")
-
-        if not api_key:
-            print("❌ ERROR: RESEND_API_KEY missing in environment!")
-            return False
-
-        if not sender:
-            print("❌ ERROR: EMAIL_FROM missing!")
-            return False
-
-        html_content = f"""
-        <div style="font-family:Arial; max-width:420px; margin:auto; background:#fff;
-                    padding:20px; border:1px solid #ddd; border-radius:10px;">
-
-            <h2 style="text-align:center; margin-bottom:10px;">Timeless Threads</h2>
-
-            <p style="font-size:15px; color:#444;">
-                Use the OTP below to verify your identity. The code is valid for
-                <strong>5 minutes</strong>.
-            </p>
-
-            <div style="text-align:center; margin:25px 0;">
-                <div style="font-size:32px; font-weight:bold; letter-spacing:6px;">
-                    {otp}
-                </div>
-            </div>
-
-            <p style="font-size:14px; color:#666;">
-                If you didn’t request this code, you may ignore this email.
-            </p>
-
-            <hr style="border:none; border-top:1px solid #ddd; margin:20px 0;">
-
-            <p style="text-align:center; font-size:12px; color:#999;">
-                © {datetime.datetime.now().year} Timeless Threads
-            </p>
-        </div>
-        """
-
-        url = "https://api.resend.com/emails"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "from": sender,
-            "to": to_email,
-            "subject": "Your Timeless Threads OTP Code",
-            "html": html_content
-        }
-
         try:
-            print("📨 Sending OTP via RESEND...")
-            response = requests.post(url, headers=headers, json=payload)
-
-            if response.status_code in (200, 201):
-                print("✔ OTP Email sent successfully through RESEND")
-                return True
-            else:
-                print("❌ RESEND ERROR:", response.text)
-                return False
-
+            self.users = UserModel(mongo)
+            self.mongo = mongo
         except Exception as e:
-            print("❌ Email sending failed:", e)
-            return False
+            print("❌ ERROR: Could not initialize UserModel:", e)
+            self.users = None
 
-    # =====================================================================
+    # ===============================================================
     # LOGIN PAGE
-    # =====================================================================
+    # ===============================================================
     def login_page(self):
         return render_template("login.html")
 
-    # =====================================================================
-    # SEND LOGIN OTP
-    # =====================================================================
-    def send_login_email(self, email):
-        if not email or "@" not in email:
-            flash("Enter a valid email!", "danger")
+    # ===============================================================
+    # LOGIN
+    # ===============================================================
+    def login(self, identifier, password):
+        # Sanitize inputs
+        identifier = (identifier or "").strip().lower()
+        password = (password or "").strip()
+
+        if not identifier or not password:
+            flash("Enter both email/mobile and password.", "danger")
             return redirect(url_for("auth.login"))
 
-        otp = otp_service.generate_otp(email)
-
-        session["otp_email"] = email
-        session["otp_mode"] = "login"
-
-        self.send_email(email, otp)
-
-        flash("OTP sent to your email!", "success")
-        return render_template("verify_otp.html", email=email)
-
-    # =====================================================================
-    # VERIFY LOGIN OTP
-    # =====================================================================
-    def verify_login_otp(self, email, otp_entered):
-        if not otp_service.verify_otp(email, otp_entered):
-            flash("Incorrect or expired OTP!", "danger")
+        # Model availability check
+        if not self.users:
+            flash("Internal error. Please try again later.", "danger")
             return redirect(url_for("auth.login"))
 
-        user = self.users.find_by_email(email)
-
-        if user:
-            session["user"] = user["name"]
-            flash("Logged in successfully!", "success")
-            return redirect(url_for("main.home"))
-
-        flash("Email not registered. Please sign up.", "warning")
-        return redirect(url_for("auth.signup_email_page"))
-
-    # =====================================================================
-    # SIGNUP EMAIL PAGE
-    # =====================================================================
-    def signup_email_page(self):
-        return render_template("signup_mobile.html")
-
-    # =====================================================================
-    # VERIFY SIGNUP EMAIL
-    # =====================================================================
-    def verify_signup_email(self, email):
-        if not email or "@" not in email:
-            flash("Enter a valid email!", "danger")
-            return redirect(url_for("auth.signup_email_page"))
-
-        if self.users.find_by_email(email):
-            flash("Email already registered!", "warning")
+        # Lookup user
+        try:
+            user = self.users.find_by_email(identifier)
+            if not user:
+                user = self.users.find_by_mobile(identifier)
+        except Exception as e:
+            print("❌ ERROR: User lookup failed:", e)
+            flash("Something went wrong. Please try again.", "danger")
             return redirect(url_for("auth.login"))
 
-        session["pending_email"] = email
-        return redirect(url_for("auth.signup_name"))
+        if not user:
+            flash("Account not found!", "danger")
+            return redirect(url_for("auth.login"))
 
-    # =====================================================================
-    # SIGNUP NAME PAGE
-    # =====================================================================
-    def signup_name_page(self):
-        email = session.get("pending_email")
+        # Account disabled (optional safety)
+        if not user.get("is_active", True):
+            flash("This account is disabled.", "danger")
+            return redirect(url_for("auth.login"))
 
-        if not email:
-            flash("Session expired. Start again.", "warning")
-            return redirect(url_for("auth.signup_email_page"))
+        # Password check
+        try:
+            valid_pw = check_password_hash(user.get("password", ""), password)
+        except Exception as e:
+            print("❌ ERROR: Password validation failed:", e)
+            valid_pw = False
 
-        return render_template("signup.html", email=email)
+        if not valid_pw:
+            flash("Incorrect password!", "danger")
+            return redirect(url_for("auth.login"))
 
-    # =====================================================================
-    # SUBMIT NAME + SEND OTP
-    # =====================================================================
-    def submit_signup_name(self, name):
-        email = session.get("pending_email")
+        # Safe session handling
+        session.clear()
+        session["user_id"] = str(user["_id"])
+        session["user_name"] = user.get("name")
 
-        if not name or not email:
-            flash("Please enter your name.", "danger")
-            return redirect(url_for("auth.signup_name"))
-
-        session["signup_name"] = name
-
-        otp = otp_service.generate_otp(email)
-        session["otp_mode"] = "signup"
-
-        self.send_email(email, otp)
-
-        flash("OTP sent to your email!", "success")
-        return render_template("verify_otp.html", email=email)
-
-    # =====================================================================
-    # VERIFY SIGNUP OTP
-    # =====================================================================
-    def verify_signup_otp(self, email, otp_entered):
-        if not otp_service.verify_otp(email, otp_entered):
-            flash("Invalid or expired OTP!", "danger")
-            return redirect(url_for("auth.signup_email_page"))
-
-        name = session.get("signup_name")
-
-        if not name or not email:
-            flash("Session expired.", "warning")
-            return redirect(url_for("auth.signup_email_page"))
-
-        self.users.create(email=email, extra={"name": name})
-        session["user"] = name
-
-        session.pop("signup_name", None)
-        session.pop("pending_email", None)
-        session.pop("otp_mode", None)
-
-        flash("Account created successfully!", "success")
+        flash("Logged in successfully!", "success")
         return redirect(url_for("main.home"))
 
-    # =====================================================================
+    # ===============================================================
+    # SIGNUP PAGE
+    # ===============================================================
+    def signup_page(self):
+        return render_template("signup.html")
+
+    # ===============================================================
+    # SIGNUP (Create User)
+    # ===============================================================
+    def signup(self, name, email, mobile, age, password):
+        if not self.users:
+            flash("Internal error. Try again later.", "danger")
+            return redirect(url_for("auth.signup"))
+
+        # Sanitize
+        name = (name or "").strip()
+        email = (email or "").strip().lower()
+        mobile = (mobile or "").strip()
+        age = (age or "").strip()
+        password = (password or "").strip()
+
+        # Validate required fields
+        if not all([name, email, mobile, age, password]):
+            flash("All fields are required!", "danger")
+            return redirect(url_for("auth.signup"))
+
+        # Validate types
+        try:
+            age_int = int(age)
+            if age_int < 0 or age_int > 120:
+                raise ValueError
+        except ValueError:
+            flash("Invalid age.", "danger")
+            return redirect(url_for("auth.signup"))
+
+        # Duplicate checks
+        try:
+            if self.users.find_by_email(email):
+                flash("Email already registered!", "warning")
+                return redirect(url_for("auth.signup"))
+
+            if self.users.find_by_mobile(mobile):
+                flash("Mobile number already registered!", "warning")
+                return redirect(url_for("auth.signup"))
+        except Exception as e:
+            print("❌ ERROR: Duplicate check failed:", e)
+            flash("Something went wrong. Try again later.", "danger")
+            return redirect(url_for("auth.signup"))
+
+        # Hash password securely
+        try:
+            hashed_password = generate_password_hash(password)
+        except Exception as e:
+            print("❌ ERROR: Password hashing failed:", e)
+            flash("Something went wrong. Try again.", "danger")
+            return redirect(url_for("auth.signup"))
+
+        # Create user safely
+        try:
+            self.users.create(
+                name=name,
+                email=email,
+                mobile=mobile,
+                age=age_int,
+                password=hashed_password,
+                created_at=datetime.utcnow(),
+                is_active=True,
+            )
+        except Exception as e:
+            print("❌ ERROR: Failed to create user:", e)
+            flash("Unable to create account right now.", "danger")
+            return redirect(url_for("auth.signup"))
+
+        flash("Account created successfully! Please login.", "success")
+        return redirect(url_for("auth.login"))
+
+    # ===============================================================
     # LOGOUT PAGE
-    # =====================================================================
+    # ===============================================================
     def logout_page(self):
-        if "user" not in session:
+        if "user_id" not in session:
             return redirect(url_for("main.home"))
+
         return render_template("logout_confirm.html")
 
-    # =====================================================================
-    # LOGOUT
-    # =====================================================================
+    # ===============================================================
+    # LOGOUT CONFIRM
+    # ===============================================================
     def logout_confirm(self):
         session.clear()
         flash("Logged out successfully!", "info")

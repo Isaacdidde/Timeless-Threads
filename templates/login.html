@@ -3,50 +3,136 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+
+<style>
+    .auth-bg {
+        min-height: 100vh;
+        background: #f8f9fc;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+    }
+
+    .auth-ad-wrapper {
+        width: 100%;
+        max-width: 480px;
+        margin-bottom: 24px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        background: #fff;
+        padding: 34px 36px;
+        border-radius: 18px;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.10);
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .auth-input {
+        border-radius: 10px;
+        padding: 10px 14px;
+        border: 1px solid #d6d6d6;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .auth-input:focus {
+        outline: none !important;
+        border-color: #000;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.15);
+    }
+
+    .auth-btn {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px;
+        letter-spacing: 0.3px;
+    }
+
+    .auth-separator {
+        margin: 20px 0;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
+
+
 
 <div class="auth-bg">
 
+    <!-- ==========================================================
+         LOGIN PAGE AD SLOT (slot: login_page_ad)
+         Protected with safe-lookup to prevent missing-key errors.
+    =========================================================== -->
+    {% if ads and ads.login_page_ad %}
+    <div class="auth-ad-wrapper">
+        {% with ad = ads.login_page_ad %}
+            {% include "ads/inject_ad_slot.html" %}
+        {% endwith %}
+    </div>
+    {% endif %}
+
+
+
+    <!-- ==========================================================
+         LOGIN FORM CARD
+    =========================================================== -->
     <div class="auth-card">
 
-        <!-- Title + Subtitle -->
         <h3 class="fw-bold text-center mb-2">Welcome Back</h3>
         <p class="text-center text-muted mb-4">
-            Login with your email address
+            Login with your registered Email or Mobile number
         </p>
 
-        <!-- ==================================================
-             EMAIL LOGIN FORM
-             POST → /auth/send-login-email
-        =================================================== -->
-        <form action="{{ url_for('auth.send_login_email') }}" method="post">
+        <form action="{{ url_for('auth.login') }}"
+              method="POST"
+              onsubmit="this.querySelector('button').disabled = true;">
 
-            <!-- Email Field -->
-            <label class="fw-semibold">Email Address</label>
-            <input type="email"
-                   name="email"
+            <!-- Identifier -->
+            <label class="fw-semibold">Email / Mobile Number</label>
+            <input type="text"
+                   name="identifier"
                    class="form-control auth-input mb-3"
-                   placeholder="Enter your email"
+                   placeholder="Enter email or mobile"
+                   autocomplete="username"
                    required>
 
-            <!-- Send OTP Button -->
-            <button class="btn btn-dark auth-btn w-100 mt-2">
-                Send OTP
+            <!-- Password -->
+            <label class="fw-semibold mt-2">Password</label>
+            <input type="password"
+                   name="password"
+                   class="form-control auth-input mb-3"
+                   placeholder="Enter password"
+                   autocomplete="current-password"
+                   required>
+
+            <!-- Login Button -->
+            <button class="btn btn-dark auth-btn w-100 mt-2" type="submit">
+                Login
             </button>
         </form>
 
-        <!-- SIGNUP LINK -->
+        <!-- SIGNUP OPTION -->
         <div class="text-center mt-4">
             <p class="text-muted mb-1">New to Timeless Threads?</p>
 
-            <a href="{{ url_for('auth.signup_email_page') }}"
-               class="btn btn-outline-dark auth-btn w-100 text-center">
+            <a href="{{ url_for('auth.signup') }}"
+               class="btn btn-outline-dark auth-btn w-100">
                 Create an Account
             </a>
         </div>
 
-    </div> <!-- end auth-card -->
+    </div>
 
-</div> <!-- end auth-bg -->
+</div>
 
 {% endblock %}

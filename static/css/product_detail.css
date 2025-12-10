@@ -1,72 +1,303 @@
+/* ============================
+   GLOBAL TOKENS
+============================ */
 :root {
-  --accent:#e64a8a;
-  --muted:#8b8b8b;
-  --shadow-lg:0 12px 40px rgba(12,12,20,0.12);
-  --shadow-sm:0 6px 18px rgba(12,12,20,0.06);
-  --radius:14px;
-  --glass:rgba(255,255,255,0.72);
-  font-family:"Inter", sans-serif;
+    --brand: #111;
+    --soft: #fafafa;
+    --border: #ddd;
+    --accent: #ff3366;
+    --radius: 14px;
+    --space: 18px;
+    --transition: .25s ease;
+    --text-dark: #333;
+    --text-medium: #555;
 }
-.container.luxury { max-width:1200px; margin:auto; padding:22px; }
-.lux-row { display:flex; flex-wrap:wrap; gap:26px; }
-.lux-left { flex:1 1 520px; }
-.lux-right { flex:1 1 420px; }
 
-/* GALLERY */
-.gallery-card { background:var(--glass); border-radius:var(--radius); box-shadow:var(--shadow-lg); padding:16px; }
-.gallery-main { height:540px; border-radius:12px; background:linear-gradient(120deg,#fff,#f6f5f9); display:flex; justify-content:center; align-items:center; overflow:hidden; position:relative; }
-.gallery-main img { max-width:100%; max-height:100%; transition:opacity .3s, transform .3s; }
-.gallery-main img.fade { opacity:0; transform:scale(0.98); }
-.gallery-nav { position:absolute; top:50%; transform:translateY(-50%); width:42px; height:42px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; cursor:pointer; display:flex; justify-content:center; align-items:center; font-size:22px; }
-.gallery-prev { left:12px; }
-.gallery-next { right:12px; }
+/* ============================
+   PAGE LAYOUT
+============================ */
+.lux-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 45px;
+    margin-top: 35px;
+}
 
-.thumb-row { display:flex; gap:12px; margin-top:12px; overflow-x:auto; padding-bottom:6px; }
-.thumb { width:80px; height:80px; object-fit:cover; border-radius:12px; border:2px solid transparent; box-shadow:var(--shadow-sm); cursor:pointer; transition:all .25s; }
-.thumb.active { transform:translateY(-4px); border-color:var(--accent); }
+.lux-left { flex: 1 1 48%; min-width: 360px; }
+.lux-right { flex: 1 1 48%; min-width: 340px; }
 
-/* PRODUCT RIGHT */
-.product-card { background:var(--glass); padding:22px; border-radius:var(--radius); box-shadow:var(--shadow-lg); }
-.prod-title { font-size:28px; font-weight:800; }
-.pd-rating-badge { background:#03a685; padding:4px 10px; border-radius:6px; color:#fff; }
+/* ============================
+   PRODUCT INFO PANEL
+============================ */
+.product-card {
+    background: #fff;
+    padding: 28px;              /* MORE SPACE ADDED */
+    border-radius: var(--radius);
+    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+}
 
-.price-row { display:flex; gap:14px; margin-top:8px; }
-.price-current { font-size:30px; font-weight:900; color:var(--accent); }
-.price-mrp { color:#777; text-decoration:line-through; }
-.price-save { color:#18877a; font-weight:700; }
+/* Product title */
+.prod-title {
+    font-size: 34px;            /* Larger */
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-dark);
+}
 
-.selector-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
-.size-pill { padding:10px 16px; border-radius:999px; border:1px solid #ddd; background:#fff; cursor:pointer; font-weight:700; transition:.2s; }
-.size-pill.active { background:var(--accent); color:#fff; }
+/* ============================
+   PRICE SECTION
+============================ */
+.price-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
 
-.color-dot { width:34px; height:34px; border-radius:50%; border:2px solid #eee; cursor:pointer; transition:.2s; }
-.color-dot.active { transform:scale(1.18); border-color:#000; }
+.price-current {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--accent);
+}
 
-.add-row { display:flex; gap:12px; margin-top:14px; }
-.add-btn { background:var(--accent); color:#fff; font-weight:800; border:none; padding:10px 22px; border-radius:10px; }
-.add-btn:disabled { opacity:.4; }
+.price-mrp { color: #999; text-decoration: line-through; }
+.price-save { color: #1b7d2f; font-weight: 600; }
 
-.highlights li { margin-bottom:6px; color:#444; }
-.table.specs-table th { width:200px; }
-.table.specs-table td { color:#444; }
+/* ============================
+   VARIANT SELECTORS
+============================ */
+.section-title {
+    margin: 22px 0 6px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-dark);
+}
 
-/* REVIEWS */
-.reviews-block { max-width:1200px; margin:auto; padding:20px; }
-.breakdown { display:flex; gap:20px; flex-wrap:wrap; }
-.breakdown .avg { text-align:center; }
-.breakdown .avg .value { font-size:40px; font-weight:900; color:var(--accent); }
+.size-pill {
+    padding: 12px 22px;
+    background: var(--soft);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+}
 
-.bar-row { display:flex; align-items:center; gap:10px; margin:6px 0; }
-.bar-track { flex:1; background:#eee; height:10px; border-radius:8px; }
-.bar-fill { height:100%; background:linear-gradient(90deg,#ffaac8,#e64a8a); width:0%; }
+.size-pill:hover { background: #eee; }
 
-.review-card { padding:14px; border-radius:12px; background:#fff; border:1px solid #eee; box-shadow:var(--shadow-sm); margin-bottom:12px; display:flex; justify-content:space-between; align-items:flex-start; }
-.review-user { font-weight:700; }
-.review-stars { color:var(--accent); font-weight:800; }
+.size-pill.active {
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+}
 
-.review-form { margin-top:20px; padding:14px; background:#fff; border:1px solid #eee; border-radius:12px; }
+.color-dot {
+    display: inline-flex;           /* prevents shrinking */
+    flex-shrink: 0;                 /* STRICTLY stops flex compression */
+    width: 42px;                    /* slightly bigger so looks premium */
+    height: 42px;
+    border-radius: 50%;
+    margin: 6px 10px 6px 0;         /* balanced spacing */
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.18);
+    cursor: pointer;
+    background-size: cover !important; /* fixes gradients, images, patterns */
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: transform .25s ease, box-shadow .25s ease;
+}
 
-.star-row i { font-size:24px; color:#ddd; cursor:pointer; transition:.2s; }
-.star-row i.active { color:var(--accent); }
+.color-dot:hover {
+    transform: scale(1.1);
+}
 
-.review-edit { display:none; margin-top:10px; padding:10px; background:#fff; border-radius:10px; border:1px solid #ddd; }
+.color-dot.active {
+    box-shadow: 0 0 0 3px var(--brand);
+}
+
+
+/* ============================
+   ADD TO CART
+============================ */
+.add-btn {
+    padding: 14px 26px;
+    border-radius: 10px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    transition: .25s ease;
+}
+
+.add-btn:hover { background: #000; transform: translateY(-2px); }
+.add-btn:disabled { opacity: .45; transform: none; }
+
+/* ============================
+   GALLERY
+============================ */
+.gallery-card {
+    background: #fff;
+    padding: 18px;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+}
+
+.gallery-main {
+    height: 500px;
+    background: #f4f4f4;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.gallery-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity .4s ease;
+}
+
+.gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.gallery-nav:hover {
+    background: rgba(255,255,255,1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.thumb-row {
+    display: flex;
+    gap: 10px;
+}
+
+.thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    object-fit: cover;
+    cursor: pointer;
+    opacity: 0.7;
+    border: 2px solid transparent;
+    transition: var(--transition);
+}
+
+.thumb:hover { opacity: 1; }
+.thumb.active {
+    opacity: 1;
+    border-color: var(--accent);
+}
+
+/* Fade animation for gallery transitions */
+.fade {
+    opacity: 0 !important;
+}
+
+/* ============================
+   SPECIFICATIONS ACCORDION
+============================ */
+.detail-section {
+    border-bottom: 1px solid #eee;
+    padding: 14px 0;
+}
+
+.detail-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.detail-body {
+    display: none;
+    padding-top: 12px;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+
+.detail-body.open {
+    display: block;
+    opacity: 1;
+}
+
+.detail-header i.rotate {
+    transform: rotate(180deg);
+}
+
+.spec-list {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.spec-list li .badge {
+    background: #fff;
+    color: var(--text-medium);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+/* ============================
+   REVIEWS
+============================ */
+.reviews-block {
+    margin-top: 50px;
+}
+
+.avg {
+    text-align: center;
+}
+
+.bar-track {
+    width: 100%;
+    height: 10px;
+    background: #eee;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: #f2b01e;
+    border-radius: 20px;
+}
+
+.review-card {
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+
+/* Stars */
+.fa-star.active {
+    color: #f2b01e !important;
+}

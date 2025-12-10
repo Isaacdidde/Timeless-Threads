@@ -2,109 +2,130 @@
 {% block content %}
 
 <!-- ==========================================================
-     CATEGORY PAGE HEADER
-     Shows the category name + quick access to the cart
-========================================================== -->
+     CATEGORY HEADER
+=========================================================== -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-capitalize">{{ category }} Collection</h2>
+    <h2 class="fw-bold text-capitalize">
+        {{ category.name if category and category.name else "Category" }} Collection
+    </h2>
 
-    <a href="{{ url_for('product.cart') }}" class="btn btn-outline-dark btn-sm">
-        View Cart
+    <a href="{{ url_for('cart.view_cart') }}" class="btn btn-outline-dark btn-sm">
+        🛒 View Cart
     </a>
 </div>
 
-
 <!-- ==========================================================
-     PRODUCT GRID — 4 columns on desktop, 2 on mobile
-========================================================== -->
+     PRODUCT GRID
+=========================================================== -->
 <div class="row g-4">
 
-    {% if products %}
+    {% if products and products|length > 0 %}
+
         {% for item in products %}
 
-        <!-- Each product card -->
-        <div class="col-6 col-md-3 fade-in">
+        {# ---------------------------------------------------
+           BUILD IMAGE LIST
+           Priority: images[] → primary_image → image → fallback
+        ---------------------------------------------------- #}
+        {% set imgs = item.images if item.images else [] %}
 
+        {% if imgs|length == 0 %}
+            {% if item.primary_image %}
+                {% set imgs = [item.primary_image] %}
+            {% elif item.image %}
+                {% set imgs = [item.image] %}
+            {% else %}
+                {% set imgs = ['no_image.jpg'] %}
+            {% endif %}
+        {% endif %}
+
+        {% set main_img = item.primary_image if item.primary_image in imgs else imgs[0] %}
+        {% set img_path_prefix = "uploads/products/" %}
+
+        {# ----------------------------------------------------
+           INLINE AD — 5th card
+        ----------------------------------------------------- #}
+        {% if loop.index0 == 4 %}
+        <div class="col-12 my-3">
+            {% if ads.card_small %}
+                {% with ad = ads.card_small %}
+                    {% include "ads/inject_ad_slot.html" %}
+                {% endwith %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# ----------------------------------------------------
+           INLINE AD — Every 8th card
+        ----------------------------------------------------- #}
+        {% if loop.index % 8 == 0 %}
+        <div class="col-12 my-4">
+            {% if ads.product_inline %}
+                {% with ad = ads.product_inline %}
+                    {% include "ads/inject_ad_slot.html" %}
+                {% endwith %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ======================================================
+             PRODUCT CARD
+        ======================================================= -->
+        <div class="col-6 col-md-3">
             <div class="card product-card h-100 position-relative shadow-sm hover-lift">
 
-                <!-- ======================================================
-                     IMAGE SLIDER CONTAINER
-                     Holds:
-                       - All product images (JSON inside data-images)
-                       - Main slide image
-                       - Prev/Next navigation buttons
-                     JS in main.js handles the animation
-                ======================================================= -->
+                <!-- Image Slideshow Component -->
                 <div class="product-img-container"
-                     data-images='[
-                        "{{ url_for("static", filename="images/products/" ~ item.image) }}",
-                        "{{ url_for("static", filename="images/products/" ~ (item.image2 or item.image)) }}",
-                        "{{ url_for("static", filename="images/products/" ~ (item.image3 or item.image)) }}"
-                     ]'>
+                     data-images='{{ imgs | map("string") | map("trim") 
+                                     | map("tojson") | join(",") | safe | prepend("[") | append("]") }}'>
 
-                    <!-- Main visible image (first frame of slider) -->
                     <img class="product-img-slide"
                          loading="lazy"
-                         src="{{ url_for('static', filename='images/products/' ~ item.image) }}"
+                         src="{{ url_for('static', filename=img_path_prefix ~ main_img) }}"
                          alt="{{ item.name }}">
 
-                    <!-- Slide buttons (absolute positioned over image) -->
                     <button class="prod-slide-btn prod-prev">❮</button>
                     <button class="prod-slide-btn prod-next">❯</button>
                 </div>
 
-                <!-- ======================================================
-                     STRETCHED LINK
-                     Makes the *entire card* clickable while keeping
-                     HTML accessible and SEO-friendly.
-                ======================================================= -->
-                <a class="stretched-link prod-card-link"
-                   href="{{ url_for('product.product_detail', product_id=item['_id']|string) }}">
+                <a class="stretched-link"
+                   href="{{ url_for('product.product_detail',
+                        slug_or_id=item.slug if item.slug else (item._id|string)) }}">
                 </a>
 
-                <!-- ======================================================
-                     PRODUCT NAME + PRICE SECTION
-                ======================================================= -->
                 <div class="p-3">
 
-                    <!-- Product title -->
-                    <h6 class="mb-1 fw-semibold product-name">{{ item.name }}</h6>
+                    <!-- NAME -->
+                    <h6 class="mb-1 fw-semibold product-name text-truncate">
+                        {{ item.name }}
+                    </h6>
 
-                    <!-- If product has a discount, show full pricing layout -->
-                    {% if item.discount and item.discount > 0 %}
-                        {% set original = (item.price / (1 - (item.discount / 100))) | round(0, "ceil") %}
+                    <!-- PRICING -->
+                    {% set price = item.price or 0 %}
+                    {% set discount = item.discount or 0 %}
 
+                    {% if discount > 0 %}
+                        {% set original = (price / (1 - discount/100)) | round(0, 'ceil') %}
                         <div class="price mt-1">
-                            <!-- Original price (strikethrough) -->
-                            <span class="text-muted text-decoration-line-through me-2">
-                                ₹{{ original }}
-                            </span>
-
-                            <!-- Discounted price -->
-                            <span class="fw-bold text-danger">₹{{ item.price }}</span>
-
-                            <!-- Discount badge -->
-                            <span class="badge bg-success ms-2">{{ item.discount }}% OFF</span>
+                            <span class="text-muted text-decoration-line-through me-2">₹{{ original }}</span>
+                            <span class="fw-bold text-danger">₹{{ price }}</span>
+                            <span class="badge bg-success ms-2">{{ discount }}% OFF</span>
                         </div>
-
-                    <!-- Normal price if no discount -->
                     {% else %}
                         <div class="price mt-1">
-                            <span class="fw-bold text-dark">₹{{ item.price }}</span>
+                            <span class="fw-bold text-dark">₹{{ price }}</span>
                         </div>
                     {% endif %}
 
-                </div> <!-- /product info -->
+                </div>
 
-            </div> <!-- /product card -->
+            </div>
+        </div>
 
-        </div> <!-- /col -->
         {% endfor %}
 
     {% else %}
-        <!-- ======================================================
-             EMPTY CATEGORY (no products found)
-        ======================================================= -->
+
         <div class="col-12">
             <div class="alert alert-info text-center py-4 fs-5">
                 No products found in this category.
@@ -113,6 +134,6 @@
 
     {% endif %}
 
-</div> <!-- /row -->
+</div>
 
 {% endblock %}

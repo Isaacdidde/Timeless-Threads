@@ -1,85 +1,104 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- ==========================================================
-     PAGE-SPECIFIC STYLES
-     Loads CSS file for search results grid + card styling.
-========================================================== -->
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/search_results.css') }}">
 {% endblock %}
 
-
-
 <!-- ==========================================================
-     PAGE TITLE — Shows the current search query
+     SEARCH HEADER
 ========================================================== -->
-<h2 class="search-title">
-    Search results for: “{{ query }}”
-</h2>
+<div class="container my-4">
 
+  <h2 class="search-title display-6 fw-semibold text-center">
+      Results for “{{ query }}”
+  </h2>
 
+  <!-- FEATURED BANNER AD (optional) -->
+  {% if ads.featured_banner %}
+  <div class="my-4">
+      {% with ad = ads.featured_banner %}
+          {% include "ads/inject_ad_slot.html" %}
+      {% endwith %}
+  </div>
+  {% endif %}
+
+</div>
 
 <!-- ==========================================================
      SEARCH RESULTS GRID
-     Displays matching products or a “No results” message.
 ========================================================== -->
-<div class="row search-grid">
+<div class="container">
+  <div class="row g-4 search-grid">
 
-    {% if results %}
-        <!-- ==========================================
-             LOOP THROUGH ALL MATCHING PRODUCTS
-             Each product appears as:
-               - image
-               - name
-               - price
-               - link to product detail page
-        =========================================== -->
-        {% for p in results %}
-        <div class="col-md-3 mb-4">
+    {% if results and results|length > 0 %}
 
-            <div class="search-card card shadow-sm">
+      {% for p in results %}
+      {% set product_name = p.get("name") or "Unnamed Product" %}
+      {% set slug_or_id = p.get("slug") or (p.get("_id") | string) %}
 
-                <!-- Product Image -->
-                <img src="{{ url_for('static', filename='images/products/' ~ p.image) }}"
-                     class="search-img"
-                     alt="{{ p.name }}">
+      {# IMAGE FALLBACK LOGIC #}
+      {% set images = p.get("images") or [] %}
+      {% set primary = p.get("primary_image") %}
+      {% if primary and primary in images %}
+          {% set img = primary %}
+      {% elif images %}
+          {% set img = images[0] %}
+      {% else %}
+          {% set img = "no_image.jpg" %}
+      {% endif %}
 
-                <div class="card-body">
+      <div class="col-6 col-md-4 col-lg-3">
 
-                    <!-- Product Name -->
-                    <div class="search-title-text">{{ p.name }}</div>
+        <div class="modern-card card border-0 h-100 shadow-sm hover-lift-small">
 
-                    <!-- Product Price -->
-                    <div class="search-price">₹{{ p.price }}</div>
+          <!-- IMAGE WRAPPER -->
+          <div class="modern-img-wrapper">
+            <img src="{{ url_for('static', filename='uploads/products/' ~ img) }}"
+                 class="modern-img"
+                 alt="{{ product_name }}"
+                 loading="lazy"
+                 onerror="this.src='{{ url_for('static', filename='uploads/products/no_image.jpg') }}'">
+          </div>
 
-                    <!-- Link to Product -->
-                    <a href="{{ url_for('product.product_detail', product_id=p._id|string) }}"
-                       class="btn search-btn">
-                        View Product
-                    </a>
+          <!-- CARD BODY -->
+          <div class="card-body px-2 py-3">
 
-                </div>
+            <!-- NAME -->
+            <div class="product-name fw-semibold text-truncate mb-1">
+              {{ product_name }}
             </div>
 
+            <!-- PRICE -->
+            <div class="product-price fw-bold mb-2">
+              ₹{{ p.get("price") or 0 }}
+            </div>
+
+            <!-- VIEW PRODUCT BUTTON -->
+            <a href="{{ url_for('product.product_detail', slug_or_id=slug_or_id) }}"
+               class="btn btn-dark w-100 modern-btn">
+              View Product
+            </a>
+
+          </div>
+
         </div>
-        {% endfor %}
 
-
+      </div>
+      {% endfor %}
 
     {% else %}
-        <!-- ==========================================
-             NO RESULTS MESSAGE
-             Displayed if no products match the search query
-        =========================================== -->
-        <div class="col-12">
-            <div class="no-results">
-                No results found for “{{ query }}”.
-            </div>
-        </div>
+
+      <!-- EMPTY STATE -->
+      <div class="col-12 text-center py-5">
+        <h4 class="text-muted mb-3">No results found for “{{ query }}”.</h4>
+        <a href="{{ url_for('main.home') }}" class="btn btn-outline-dark">
+          Return to Home
+        </a>
+      </div>
 
     {% endif %}
-
+  </div>
 </div>
 
 {% endblock %}

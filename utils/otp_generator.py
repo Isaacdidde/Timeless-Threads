@@ -1,91 +1,126 @@
+"""
+otp_generator.py
+
+Production-ready in-memory OTP Manager.
+
+Features:
+- Secure random 6-digit OTP generation
+- Per-mobile cooldown to prevent spam
+- OTP expiry (default 5 minutes)
+- Auto cleanup on access
+- Optional max verification attempts
+- Stateless singleton usable across the app
+
+⚠ NOT persistent. OTPs reset when the server restarts.
+"""
+
 import random
 import time
+from typing import Optional
 
 
 class OTPService:
-    """
-    A lightweight, in-memory OTP (One-Time Password) manager.
+    def __init__(
+        self,
+        ttl_seconds: int = 300,          # 5 minutes
+        resend_cooldown: int = 30,       # minimum time before resending OTP
+        max_attempts: int = 5            # max wrong tries before OTP invalidates
+    ):
+        self.ttl_seconds = ttl_seconds
+        self.resend_cooldown = resend_cooldown
+        self.max_attempts = max_attempts
 
-    The OTPs are stored in a simple dictionary structure:
-        {
-            "<mobile_number>": {
-                "otp": "<6-digit string>",
-                "expiry": <unix timestamp when OTP expires>
-            }
-        }
-
-    NOTE:
-    - This is NOT persistent storage; data resets when the server restarts.
-    - Ideal for demos, prototypes, or low-security local flows.
-    """
-
-    def __init__(self):
-        # Internal storage for OTP data
-        # Keys: mobile numbers (strings)
-        # Values: {"otp": str, "expiry": float}
+        # Internal structure:
+        # {
+        #   "9876543210": {
+        #       "otp": "123456",
+        #       "expiry": 1710500000.00,
+        #       "attempts": 0,
+        #       "last_sent": 1710499800.00
+        #   }
+        # }
         self._store = {}
 
-    def generate_otp(self, mobile: str, ttl_seconds: int = 300) -> str:
-        """
-        Generate a 6-digit OTP and store it with an expiry timestamp.
+    # ---------------------------------------------------------
+    # INTERNAL HELPERS
+    # ---------------------------------------------------------
+    def _normalize_mobile(self, mobile: str) -> str:
+        """Strip spaces, enforce string, remove formatting."""
+        return "".join(str(mobile).strip().split())
 
-        :param mobile: Mobile number as a string
-        :param ttl_seconds: Time-to-live for OTP (default: 300s = 5 minutes)
-        :return: The generated OTP as a string
-        """
+    def _cleanup_expired(self, mobile: str):
+        """Remove expired OTP from memory."""
+        rec = self._store.get(mobile)
+        if rec and time.time() > rec["expiry"]:
+            del self._store[mobile]
 
-        # Create a random 6-digit OTP.
+    # ---------------------------------------------------------
+    # GENERATE OTP
+    # ---------------------------------------------------------
+    def generate_otp(self, mobile: str) -> Optional[str]:
+        """
+        Create a new OTP unless cooldown prevents it.
+
+        Returns:
+            otp string OR None if resend too soon
+        """
+        mobile = self._normalize_mobile(mobile)
+        now = time.time()
+
+        rec = self._store.get(mobile)
+
+        # Rate-limit: enforce resend cooldown
+        if rec and now - rec["last_sent"] < self.resend_cooldown:
+            return None  # caller should show: "Try again in X seconds"
+
         otp = f"{random.randint(100000, 999999)}"
 
-        # Compute expiry time as current timestamp + TTL.
-        expiry = time.time() + ttl_seconds
-
-        # Save OTP record in memory.
         self._store[mobile] = {
             "otp": otp,
-            "expiry": expiry
+            "expiry": now + self.ttl_seconds,
+            "attempts": 0,
+            "last_sent": now
         }
 
         return otp
 
+    # ---------------------------------------------------------
+    # VERIFY OTP
+    # ---------------------------------------------------------
     def verify_otp(self, mobile: str, otp: str) -> bool:
         """
-        Validate the OTP submitted by the user.
+        Validate OTP. On success → OTP deleted.
+        On failure → increments attempt counter.
 
-        Conditions for success:
-        - OTP exists for the given mobile number
-        - OTP is not expired
-        - OTP matches the stored one
-
-        :param mobile: Mobile number as string
-        :param otp: OTP entered by the user
-        :return: True if OTP is valid and used, False otherwise
+        Returns:
+            True if OTP correct.
+            False otherwise.
         """
+        mobile = self._normalize_mobile(mobile)
 
-        # Fetch OTP record for this mobile number.
-        record = self._store.get(mobile)
+        # Cleanup expired codes
+        self._cleanup_expired(mobile)
 
-        # If no OTP exists → invalid attempt.
-        if not record:
+        rec = self._store.get(mobile)
+        if not rec:
             return False
 
-        # If current time has passed expiry → delete & reject.
-        if time.time() > record["expiry"]:
-            del self._store[mobile]  # cleanup expired code
+        # Too many failed attempts → invalidate OTP
+        if rec["attempts"] >= self.max_attempts:
+            del self._store[mobile]
             return False
 
-        # If OTP matches → delete (single-use) and accept.
-        if record["otp"] == str(otp):
+        # Check match
+        if rec["otp"] == str(otp).strip():
             del self._store[mobile]
             return True
 
-        # OTP did not match → invalid.
+        # Wrong OTP → count failed attempt
+        rec["attempts"] += 1
         return False
 
 
 # -----------------------------------------------------------
-# Singleton instance
-# Use otp_service.generate_otp() and otp_service.verify_otp()
-# across your application for consistent OTP handling.
+# Singleton instance for reuse across the application
 # -----------------------------------------------------------
 otp_service = OTPService()

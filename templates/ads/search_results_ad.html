@@ -1,0 +1,97 @@
+{# templates/ads/search_results_ad.html — Search Page Banner Ad #}
+
+{% if ad %}
+<div class="search-banner-ad" style="width:100%; margin:15px 0;">
+
+    <a href="{{ ad.get('redirect_url') or '#' }}"
+       target="_blank"
+       class="tt-search-ad-link"
+       data-campaign-id="{{ ad.get('campaign_id') }}"
+       data-slot-id="{{ ad.get('slot_id') }}"
+       style="
+           display:block;
+           width:100%;
+           overflow:hidden;
+           border-radius:12px;
+       ">
+
+        <img src="{{ ad.get('image_url') }}"
+             alt="{{ ad.get('headline') or 'Sponsored' }}"
+             loading="lazy"
+             class="tt-search-ad-img"
+             style="
+                width:100%;
+                height:auto;
+                display:block;
+             ">
+
+    </a>
+
+    {% if ad.get('headline') %}
+    <p class="text-center mt-2 fw-semibold" style="color:#444;">
+        {{ ad.get('headline') }}
+    </p>
+    {% endif %}
+
+</div>
+
+<script>
+(function () {
+    try {
+        // ⭐ Always send tracking requests to Dcorp backend
+        const root = "http://127.0.0.1:5000";
+
+        const wrap = document.currentScript.previousElementSibling;
+        if (!wrap) return;
+
+        const link = wrap.querySelector(".tt-search-ad-link");
+        const img  = wrap.querySelector(".tt-search-ad-img");
+
+        if (!link) return;
+
+        // NEW → backend uses campaign_id (not ad_id)
+        const campaignId = link.dataset.campaignId || null;
+        const slotId     = link.dataset.slotId || null;
+
+        if (!campaignId || !slotId) return;
+
+        // ----------------------------
+        // IMPRESSION TRACKING
+        // ----------------------------
+        function sendImpression() {
+            fetch(`${root}/api/ads/track/impression`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                }),
+            }).catch(() => {});
+        }
+
+        // Track impression when image loads
+        img.complete
+            ? sendImpression()
+            : img.addEventListener("load", sendImpression);
+
+        // ----------------------------
+        // CLICK TRACKING
+        // ----------------------------
+        link.addEventListener("click", () => {
+            fetch(`${root}/api/ads/track/click`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaign_id: campaignId,
+                    slot_id: slotId
+                }),
+            }).catch(() => {});
+        });
+
+    } catch (err) {
+        console.error("search_results_ad tracking error:", err);
+    }
+})();
+</script>
+
+{% endif %}

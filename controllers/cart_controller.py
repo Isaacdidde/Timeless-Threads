@@ -1,211 +1,192 @@
-from flask import render_template, session, flash, redirect, url_for
-from bson import ObjectId
-from datetime import datetime
+from flask import render_template, session, redirect, url_for, flash
+from bson import ObjectId, errors as bson_errors
+from database.connection import get_collection
 
 
 class CartController:
-    def __init__(self, mongo):
-        # Store Mongo reference for DB operations
-        self.mongo = mongo
 
-    # ---------------------------------------------------------
-    # NORMALIZE CART
-    # Ensures the cart always follows a consistent structure:
-    # Each item becomes a dict with:
-    #   - product_id (str)
-    #   - quantity (int)
-    #   - size (str | None)
-    #   - color (str | None)
-    #
-    # Also converts old formats where item was simply a string.
-    # ---------------------------------------------------------
-    def normalize_cart(self):
-        cart = session.get("cart", [])
-        normalized = []
-        changed = False
+    # ----------------------------------------------------------------
+    # Helper: Normalize variant values
+    # ----------------------------------------------------------------
+    def _normalize(self, value):
+        """
+        Converts '', 'none', 'None', 'null', None → None
+        """
+        if value is None:
+            return None
+        value = str(value).strip().lower()
+        if value in ("", "none", "null"):
+            return None
+        return value
 
-        for item in cart:
+    # ----------------------------------------------------------------
+    # INTERNAL HELPERS
+    # ----------------------------------------------------------------
+    def _get_cart(self):
+        """
+        Always returns a safe list, never crashes.
+        """
+        cart = session.get("cart")
+        if not isinstance(cart, list):
+            session["cart"] = []
+            return []
+        return cart
 
-            # OLD FORMAT → item was just product_id string
-            if isinstance(item, str):
-                normalized.append({
-                    "product_id": item,
-                    "quantity": 1,
-                    "size": None,
-                    "color": None
-                })
-                changed = True
-
-            # PROPER dict format
-            elif isinstance(item, dict) and "product_id" in item:
-                normalized.append({
-                    "product_id": str(item["product_id"]),
-                    "quantity": int(item.get("quantity", 1)),
-                    "size": item.get("size"),
-                    "color": item.get("color")
-                })
-
-            # Invalid item → skip but mark cart as changed
-            else:
-                changed = True
-
-        # Save updated cart into session only if changes happened
-        if changed:
-            session["cart"] = normalized
-            session.modified = True
-
-    # ---------------------------------------------------------
-    # ADD ITEM TO CART
-    # Handles:
-    #   - Product validation
-    #   - Variant matching (size + color)
-    #   - Increasing quantity if item exists
-    #   - Cosmetics category bypassing size/color requirement
-    # ---------------------------------------------------------
-    def add_to_cart(self, product_id, quantity, size, color):
-
-        # Validate product ID and fetch product
+    def _products(self):
         try:
-            product = self.mongo.db.products.find_one({"_id": ObjectId(product_id)})
-        except:
-            flash("Invalid product.", "danger")
-            return redirect(url_for("main.home"))
+            return get_collection("products")
+        except Exception as e:
+            print("❌ ERROR: Cannot get products collection:", e)
+            return None
 
-        if not product:
-            flash("Product not found.", "danger")
-            return redirect(url_for("main.home"))
-
-        # Cosmetics never require size or color
-        is_cosmetics = (product.get("category") == "cosmetics")
-
-        # Validate size selection for non-cosmetics
-        if not is_cosmetics:
-            if product.get("sizes") and not size:
-                flash("Please select a size.", "warning")
-                return redirect(url_for("product.product_detail", product_id=product_id))
-
-            if product.get("colors") and not color:
-                flash("Please select a color.", "warning")
-                return redirect(url_for("product.product_detail", product_id=product_id))
-
-        cart = session.get("cart", [])
-
-        # -----------------------------------------------------
-        # MATCH EXISTING ITEM (same product + same variant)
-        # If found → increase quantity instead of adding new row
-        # -----------------------------------------------------
-        for item in cart:
-            if (
-                item["product_id"] == product_id
-                and (item.get("size") or None) == (size if not is_cosmetics else None)
-                and (item.get("color") or None) == (color if not is_cosmetics else None)
-            ):
-                item["quantity"] += quantity
-                session["cart"] = cart
-                session.modified = True
-                flash("Quantity updated!", "success")
-                return redirect(url_for("product.product_detail", product_id=product_id))
-
-        # -----------------------------------------------------
-        # ADD AS NEW CART ITEM
-        # -----------------------------------------------------
-        cart.append({
-            "product_id": product_id,
-            "quantity": quantity,
-            "size": size if not is_cosmetics else None,
-            "color": color if not is_cosmetics else None,
-            "added_at": datetime.utcnow()
-        })
-
-        session["cart"] = cart
-        session.modified = True
-        flash("Added to cart!", "success")
-        return redirect(url_for("product.product_detail", product_id=product_id))
-
-    # ---------------------------------------------------------
+    # ----------------------------------------------------------------
     # VIEW CART
-    # Builds a structured list of cart items with:
-    #   - product details
-    #   - computed MRP (original price before discount)
-    #   - total price for each line item
-    # Then renders the cart page.
-    # ---------------------------------------------------------
-    def cart_page(self):
+    # ----------------------------------------------------------------
+    def view_cart(self):
+        cart = self._get_cart()
+        products_col = self._products()
+
+        if not products_col:
+            flash("Unable to load products.", "danger")
+            return render_template("cart.html", cart_items=[])
+
         cart_items = []
-        cart = session.get("cart", [])
 
-        for entry in cart:
-
-            # Fetch product details safely
+        for item in cart:
+            product_id = item.get("product_id")
             try:
-                product = self.mongo.db.products.find_one({"_id": ObjectId(entry["product_id"])})
-            except:
+                oid = ObjectId(product_id)
+            except bson_errors.InvalidId:
+                print("⚠ WARNING: Invalid product ID in cart:", product_id)
+                continue
+
+            try:
+                product = products_col.find_one({"_id": oid})
+            except Exception as e:
+                print("⚠ WARNING: Product lookup failed:", e)
                 continue
 
             if not product:
                 continue
 
-            # Calculate original price (MRP) from discounted price
-            if product.get("discount"):
-                mrp = int(product["price"] / (1 - product["discount"] / 100))
-            else:
-                mrp = product["price"]
+            # Compute totals safely
+            try:
+                qty = int(item.get("quantity", 1))
+                total = qty * int(product.get("price", 0))
+            except Exception:
+                total = 0
 
             cart_items.append({
-                "product": product,                         # entire product document
-                "quantity": entry["quantity"],
-                "size": entry.get("size"),
-                "color": entry.get("color"),
-                "total": product["price"] * entry["quantity"],  # final price * quantity
-                "mrp": mrp                                  # original price
+                "product": product,
+                "size": item.get("size"),
+                "color": item.get("color"),
+                "quantity": qty,
+                "total": total,
             })
 
         return render_template("cart.html", cart_items=cart_items)
 
-    # ---------------------------------------------------------
-    # REMOVE AN ITEM FROM CART
-    # Matches the exact variant (size + color) and removes only one.
-    # ---------------------------------------------------------
-    def remove_from_cart(self, product_id, size, color):
+    # ----------------------------------------------------------------
+    # ADD TO CART
+    # ----------------------------------------------------------------
+    def add_to_cart(self, product_id, form):
+        cart = self._get_cart()
 
-        # Convert "none" back to None for accurate matching
-        if size == "none":
-            size = None
-        if color == "none":
-            color = None
+        # quantity safe parse
+        try:
+            quantity = max(1, int(form.get("quantity", 1)))
+        except ValueError:
+            quantity = 1
 
-        cart = session.get("cart", [])
-        new_cart = []
-        removed = False
+        size = self._normalize(form.get("selected_size"))
+        color = self._normalize(form.get("selected_color"))
+
+        # Merge with existing cart item
+        for item in cart:
+            if (
+                item.get("product_id") == product_id and
+                self._normalize(item.get("size")) == size and
+                self._normalize(item.get("color")) == color
+            ):
+                try:
+                    item["quantity"] += quantity
+                except Exception:
+                    item["quantity"] = quantity
+
+                session["cart"] = cart
+                flash("Updated quantity in cart!", "success")
+                return redirect(url_for("cart.view_cart"))
+
+        # Add new entry
+        cart.append({
+            "product_id": product_id,
+            "quantity": quantity,
+            "size": size,
+            "color": color
+        })
+
+        session["cart"] = cart
+        flash("Added to cart!", "success")
+        return redirect(url_for("cart.view_cart"))
+
+    # ----------------------------------------------------------------
+    # UPDATE QUANTITY
+    # ----------------------------------------------------------------
+    def update_quantity(self, form):
+        cart = self._get_cart()
+
+        product_id = form.get("product_id")
+        size = self._normalize(form.get("size"))
+        color = self._normalize(form.get("color"))
+
+        try:
+            quantity = max(1, int(form.get("quantity", 1)))
+        except ValueError:
+            quantity = 1
 
         for item in cart:
-            is_match = (
-                item["product_id"] == product_id and
-                (item.get("size") or None) == size and
-                (item.get("color") or None) == color
+            if (
+                item.get("product_id") == product_id and
+                self._normalize(item.get("size")) == size and
+                self._normalize(item.get("color")) == color
+            ):
+                item["quantity"] = quantity
+
+        session["cart"] = cart
+        flash("Cart updated!", "success")
+        return redirect(url_for("cart.view_cart"))
+
+    # ----------------------------------------------------------------
+    # REMOVE FROM CART
+    # ----------------------------------------------------------------
+    def remove_from_cart(self, form):
+        cart = self._get_cart()
+
+        product_id = form.get("product_id")
+        size = self._normalize(form.get("size"))
+        color = self._normalize(form.get("color"))
+
+        cleaned = [
+            item for item in cart
+            if not (
+                item.get("product_id") == product_id and
+                self._normalize(item.get("size")) == size and
+                self._normalize(item.get("color")) == color
             )
+        ]
 
-            # Skip only the first matching item
-            if is_match and not removed:
-                removed = True
-            else:
-                new_cart.append(item)
+        session["cart"] = cleaned
+        flash("Item removed!", "info")
+        return redirect(url_for("cart.view_cart"))
 
-        session["cart"] = new_cart
-        session.modified = True
+    # ----------------------------------------------------------------
+    # CHECKOUT PAGE
+    # ----------------------------------------------------------------
+    def checkout_page(self):
+        cart = self._get_cart()
 
-        flash("Item removed." if removed else "Item not found.",
-              "info" if removed else "warning")
+        if not cart:
+            flash("Your cart is empty!", "warning")
+            return redirect(url_for("cart.view_cart"))
 
-        return redirect(url_for("product.cart"))
-
-    # ---------------------------------------------------------
-    # CHECKOUT (placeholder)
-    # Full checkout flow can later include:
-    #   - Address selection
-    #   - Payment gateway
-    #   - Order creation
-    # For now it loads a placeholder page.
-    # ---------------------------------------------------------
-    def checkout(self):
-        return render_template("checkout_placeholder.html")
+        return render_template("checkout.html")

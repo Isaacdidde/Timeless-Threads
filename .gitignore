@@ -1,33 +1,107 @@
-# Python
+###############################################
+#   PYTHON / FLASK
+###############################################
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pdb
+*.pkl
+
+# Virtual environments
 env/
 venv/
+.env/
+.venv/
+
+# Environment variables
 .env
-.env.* 
+.env.*
+*.env
+
+# Flask instance folder (contains configs, uploads, etc.)
 instance/
+
+# SQLite (if used locally)
 *.sqlite3
+*.db
 
-# Flask
-instance/
+# Egg metadata
 *.egg-info/
+*.egg
 
-# IDEs and OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+###############################################
+#   LOGS / RUNTIME FILES
+###############################################
+*.log
+logs/
+*.pid
 
-# node (if frontend assets)
+###############################################
+#   FRONTEND / JS ASSETS
+###############################################
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# build/dist
+# Build outputs
 dist/
 build/
-*.log
+.cache/
+.cache-loader/
+coverage/
 
-# secrets / keys
+###############################################
+#   STATIC UPLOADS (DO NOT version user uploads)
+###############################################
+static/uploads/
+media/
+uploads/
+
+###############################################
+#   EDITOR / OS JUNK
+###############################################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.cache/
+
+###############################################
+#   SECRETS / KEYS (VERY IMPORTANT)
+###############################################
 *.pem
 *.key
+*.crt
+*.cert
+
+# JWT keys or secret tokens (if any)
+jwt_secret*
+secret.key
+secret.txt
+
+###############################################
+#   MISC OPTIONAL
+###############################################
+# Compiled front-end bundles
+public/build/
+public/assets/
+
+# Python packaging
+build/
+dist/
+MANIFEST

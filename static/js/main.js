@@ -1,342 +1,310 @@
-// ---------------------------------------------------------
-// main.js — Global UI Enhancements for Timeless Threads
-// ---------------------------------------------------------
+// ======================================================================
+// main.js – Production-Ready Frontend Enhancements for Timeless Threads
+// ======================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
 
     // ======================================================
-    // 1. AUTO-HIDE FLASH MESSAGES (after 5 seconds)
-    //
-    // Bootstrap alerts displayed via Flask flash messages
-    // fade out automatically for smoother UX.
-    //
-    // - Adds fade-out class
-    // - Then closes the alert using Bootstrap JS
+    // UTILITIES
     // ======================================================
-    const flashMessages = document.querySelectorAll(".alert");
-    if (flashMessages.length) {
+
+    const fadeOut = (el, duration = 200) => {
+        if (!el) return;
+        el.classList.add("fade-out");
+        return new Promise(resolve => setTimeout(resolve, duration));
+    };
+
+    const smoothUpdateImage = (imgEl, src, duration = 200) => {
+        if (!imgEl) return;
+        imgEl.style.opacity = 0;
         setTimeout(() => {
-            flashMessages.forEach(msg => {
-                msg.classList.add("fade-out");
-                setTimeout(() => {
-                    try {
-                        bootstrap.Alert.getOrCreateInstance(msg).close();
-                    } catch (err) {
-                        // Bootstrap might not be loaded or alert already removed
-                    }
-                }, 400);
+            imgEl.src = src;
+            imgEl.style.opacity = 1;
+        }, duration);
+    };
+
+
+    // ======================================================
+    // 1. AUTO-HIDE FLASH MESSAGES
+    // ======================================================
+    (() => {
+        const alerts = document.querySelectorAll(".alert");
+        if (!alerts.length) return;
+
+        setTimeout(() => {
+            alerts.forEach(async alert => {
+                await fadeOut(alert, 350);
+                try {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                } catch (_) {}
             });
         }, 5000);
-    }
+    })();
+
 
     // ======================================================
-    // 2. SMOOTH SCROLL FOR ANCHOR LINKS (#target)
-    //
-    // Any <a href="#section"> smoothly scrolls to that element.
-    // Makes in-page navigation more elegant.
+    // 2. SMOOTH SCROLL FOR IN-PAGE LINKS
     // ======================================================
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener("click", function (e) {
-            const target = document.querySelector(this.getAttribute("href"));
-            if (target) {
+    (() => {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener("click", e => {
+                const target = document.querySelector(anchor.getAttribute("href"));
+                if (!target) return;
                 e.preventDefault();
                 target.scrollIntoView({ behavior: "smooth" });
-            }
+            });
         });
-    });
+    })();
+
 
     // ======================================================
-    // 3. "SCROLL TO TOP" BUTTON
-    //
-    // Button appears when the user scrolls down 300px.
-    // On click, smoothly scrolls back to top.
+    // 3. SCROLL-TO-TOP BUTTON
     // ======================================================
-    const scrollBtn = document.getElementById("scrollTopBtn");
-    if (scrollBtn) {
+    (() => {
+        const btn = document.getElementById("scrollTopBtn");
+        if (!btn) return;
+
         window.addEventListener("scroll", () => {
-            scrollBtn.style.display = window.scrollY > 300 ? "block" : "none";
+            btn.style.display = window.scrollY > 300 ? "block" : "none";
         });
 
-        scrollBtn.addEventListener("click", () => {
+        btn.addEventListener("click", () => {
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
-    }
+    })();
+
 
     // ======================================================
-    // 4. PINCODE CHECKER (Delivery Availability)
-    //
-    // Users enter a 6-digit PIN code → API request is made to
-    // https://api.postalpincode.in/pincode/<PIN>
-    //
-    // Displays:
-    //   - Delivery availability
-    //   - District & State
-    //   - Estimated delivery days (based on zones)
+    // 4. PINCODE DELIVERY CHECKER
     // ======================================================
-    const btn = document.getElementById("checkPincodeBtn");
-    const input = document.getElementById("pincodeInput");
-    const result = document.getElementById("pincodeResult");
+    (() => {
+        const btn = document.getElementById("checkPincodeBtn");
+        const input = document.getElementById("pincodeInput");
+        const output = document.getElementById("pincodeResult");
 
-    if (btn && input && result) {
+        if (!btn || !input || !output) return;
+
+        const zones = {
+            north: ["Delhi", "Haryana", "Punjab", "UP", "Himachal Pradesh"],
+            south: ["Karnataka", "Tamil Nadu", "Kerala", "Telangana"],
+            west: ["Maharashtra", "Gujarat", "Rajasthan"],
+            east: ["West Bengal", "Odisha", "Assam", "Bihar"]
+        };
+
+        const estimateDays = (state) => {
+            if (zones.north.includes(state)) return 3;
+            if (zones.south.includes(state)) return 5;
+            if (zones.west.includes(state)) return 4;
+            if (zones.east.includes(state)) return 6;
+            return 7;
+        };
+
         btn.addEventListener("click", async () => {
-            const pincode = input.value.trim();
+            const pin = input.value.trim();
 
-            // Validate PIN format
-            if (pincode.length !== 6) {
-                result.innerHTML = `<div class="text-danger">Enter a valid 6-digit PIN code.</div>`;
+            if (pin.length !== 6) {
+                output.innerHTML = `<div class="text-danger">Enter a valid 6-digit PIN code.</div>`;
                 return;
             }
 
-            result.innerHTML = `<div class="text-info">Checking availability...</div>`;
+            output.innerHTML = `<div class="text-info">Checking availability...</div>`;
 
             try {
-                // Fetch postal data
-                const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
                 const data = await res.json();
 
-                if (data[0].Status !== "Success") {
-                    result.innerHTML = `<div class="text-danger">Delivery not available for this location.</div>`;
+                if (!data || data[0].Status !== "Success") {
+                    output.innerHTML = `<div class="text-danger">Delivery not available for this location.</div>`;
                     return;
                 }
 
-                // Extract location info
-                const district = data[0].PostOffice[0].District;
-                const state = data[0].PostOffice[0].State;
+                const office = data[0].PostOffice[0];
+                const days = estimateDays(office.State);
 
-                const deliveryDays = getDeliveryDays(state);
-
-                // Success message
-                result.innerHTML = `
+                output.innerHTML = `
                     <div class="alert alert-success">
-                        ✔ Delivery available to <b>${district}, ${state}</b><br>
-                        🚚 Estimated Delivery: <b>${deliveryDays} days</b>
+                        ✔ Delivery available to <b>${office.District}, ${office.State}</b><br>
+                        🚚 Estimated Delivery: <b>${days} days</b>
                     </div>
                 `;
-            } catch (err) {
-                result.innerHTML = `<div class="text-danger">Error checking delivery.</div>`;
+            } catch {
+                output.innerHTML = `<div class="text-danger">Error checking delivery.</div>`;
             }
         });
-    }
+    })();
 
-    // Zone-based delivery estimate helper
-    function getDeliveryDays(state) {
-        const north = ["Delhi", "Haryana", "Punjab", "UP", "Himachal Pradesh"];
-        const south = ["Karnataka", "Tamil Nadu", "Kerala", "Telangana"];
-        const west  = ["Maharashtra", "Gujarat", "Rajasthan"];
-        const east  = ["West Bengal", "Odisha", "Assam", "Bihar"];
-
-        if (north.includes(state)) return 3;
-        if (south.includes(state)) return 5;
-        if (west.includes(state)) return 4;
-        if (east.includes(state)) return 6;
-        return 7; // fallback for remote regions
-    }
 
     // ======================================================
-    // 5. FADE-IN EFFECT FOR PRODUCT & CATEGORY CARDS
-    //
-    // # Improves page aesthetics by animating cards on load.
+    // 5. FADE-IN ON LOAD FOR CARDS
     // ======================================================
-    document.querySelectorAll(".product-card, .category-card")
-        .forEach(card => card.classList.add("fade-in"));
+    (() => {
+        document.querySelectorAll(".product-card, .category-card")
+            .forEach(card => card.classList.add("fade-in"));
+    })();
+
 
     // ======================================================
-    // 6. CATEGORY + PRODUCT CARD SLIDESHOW
-    //
-    // Each product/category card switches through its images
-    // on hover (auto slideshow). Also supports manual prev/next.
-    //
-    // - Images defined via data-images="[...]"
-    // - Smooth fade animation
-    // - Auto-rotate with random timing
+    // 6. PRODUCT CARD SLIDESHOW (Category/List Pages)
     // ======================================================
-    document.querySelectorAll(".product-img-container").forEach(container => {
+    (() => {
+        const cardContainers = document.querySelectorAll(".product-img-container");
+        if (!cardContainers.length) return;
 
-        const images = JSON.parse(container.dataset.images);
-        const img = container.querySelector(".product-img-slide");
-        const prev = container.querySelector(".prod-prev");
-        const next = container.querySelector(".prod-next");
+        cardContainers.forEach(container => {
 
-        let index = 0;
-        let interval = null;
+            let images, img, prev, next;
 
-        // Smooth fade transition effect
-        function swapImage(src) {
-            img.classList.add("fade-out");
-            setTimeout(() => {
-                img.src = src;
-                img.classList.remove("fade-out");
-            }, 200);
-        }
+            try {
+                images = JSON.parse(container.dataset.images);
+            } catch {
+                return; // skip container with invalid data
+            }
 
-        function nextImage() {
-            index = (index + 1) % images.length;
-            swapImage(images[index]);
-        }
+            img = container.querySelector(".product-img-slide");
+            prev = container.querySelector(".prod-prev");
+            next = container.querySelector(".prod-next");
 
-        function prevImage() {
-            index = (index - 1 + images.length) % images.length;
-            swapImage(images[index]);
-        }
+            if (!img || !images.length) return;
 
-        function resetImage() {
-            index = 0;
-            swapImage(images[0]);
-        }
+            let index = 0;
+            let interval = null;
 
-        function startAuto() {
-            stopAuto();
-            interval = setInterval(nextImage, 1200 + Math.random() * 1500);
-        }
+            const updateImage = () => smoothUpdateImage(img, images[index]);
 
-        function stopAuto() {
-            if (interval) clearInterval(interval);
-            interval = null;
-        }
+            const startAuto = () => {
+                stopAuto();
+                interval = setInterval(() => {
+                    index = (index + 1) % images.length;
+                    updateImage();
+                }, 1200 + Math.random() * 1500);
+            };
 
-        // Start/stop slideshow on hover
-        container.addEventListener("mouseenter", startAuto);
-        container.addEventListener("mouseleave", () => {
-            stopAuto();
-            resetImage();
+            const stopAuto = () => interval && clearInterval(interval);
+
+            container.addEventListener("mouseenter", startAuto);
+            container.addEventListener("mouseleave", () => {
+                stopAuto();
+                index = 0;
+                updateImage();
+            });
+
+            prev?.addEventListener("click", e => {
+                e.preventDefault();
+                stopAuto();
+                index = (index - 1 + images.length) % images.length;
+                updateImage();
+            });
+
+            next?.addEventListener("click", e => {
+                e.preventDefault();
+                stopAuto();
+                index = (index + 1) % images.length;
+                updateImage();
+            });
         });
-
-        // Manual navigation
-        next.addEventListener("click", e => {
-            e.preventDefault();
-            e.stopPropagation();
-            stopAuto();
-            nextImage();
-        });
-
-        prev.addEventListener("click", e => {
-            e.preventDefault();
-            e.stopPropagation();
-            stopAuto();
-            prevImage();
-        });
-    });
-
-}); // END first DOMContentLoaded
+    })();
 
 
+    // ======================================================
+    // 7. PRODUCT DETAIL — MAIN IMAGE SLIDER
+    // ======================================================
+    (() => {
+        const containers = document.querySelectorAll(".pd-main-img-container");
+        if (!containers.length) return;
 
-// ==========================================================
-// PRODUCT DETAIL PAGE — MAIN IMAGE SLIDER
-//
-// Similar to card slideshow but dedicated to product detail.
-// Includes:
-//   - Auto rotation
-//   - Manual next/prev
-//   - Thumbnail click selection
-//   - Fade animation
-// ==========================================================
+        containers.forEach(container => {
 
-document.addEventListener("DOMContentLoaded", () => {
+            let images;
+            try {
+                images = JSON.parse(container.dataset.images);
+            } catch {
+                return;
+            }
 
-    document.querySelectorAll(".pd-main-img-container").forEach(container => {
+            const img = container.querySelector(".pd-main-img");
+            const prev = container.querySelector(".pd-prev");
+            const next = container.querySelector(".pd-next");
+            const thumbs = container.parentElement.querySelectorAll(".pd-thumb");
 
-        const images = JSON.parse(container.dataset.images);
-        const img = container.querySelector(".pd-main-img");
-        const prev = container.querySelector(".pd-prev");
-        const next = container.querySelector(".pd-next");
-        const thumbs = container.parentElement.querySelectorAll(".pd-thumb");
+            if (!img || !images.length) return;
 
-        let index = 0;
-        let interval = null;
+            let index = 0;
+            let interval;
 
-        // Updates main image + active thumbnail
-        function update() {
-            img.style.opacity = 0;
-            setTimeout(() => {
-                img.src = images[index];
-                img.style.opacity = 1;
-            }, 200);
+            const update = () => {
+                smoothUpdateImage(img, images[index]);
+                thumbs.forEach(t => t.classList.remove("active"));
+                thumbs[index]?.classList.add("active");
+            };
 
-            thumbs.forEach(t => t.classList.remove("active"));
-            if (thumbs[index]) thumbs[index].classList.add("active");
-        }
+            const startAuto = () => {
+                stopAuto();
+                interval = setInterval(() => {
+                    index = (index + 1) % images.length;
+                    update();
+                }, 2200);
+            };
 
-        function startAuto() {
-            stopAuto();
-            interval = setInterval(() => {
+            const stopAuto = () => interval && clearInterval(interval);
+
+            next?.addEventListener("click", e => {
+                e.preventDefault();
+                stopAuto();
                 index = (index + 1) % images.length;
                 update();
-            }, 2200);
-        }
+            });
 
-        function stopAuto() {
-            if (interval) clearInterval(interval);
-            interval = null;
-        }
-
-        // Manual next/prev controls
-        next.addEventListener("click", e => {
-            e.preventDefault();
-            e.stopPropagation();
-            index = (index + 1) % images.length;
-            update();
-            stopAuto();
-        });
-
-        prev.addEventListener("click", e => {
-            e.preventDefault();
-            e.stopPropagation();
-            index = (index - 1 + images.length) % images.length;
-            update();
-            stopAuto();
-        });
-
-        // Thumbnail click -> jump to image
-        thumbs.forEach((t, i) => {
-            t.addEventListener("click", () => {
-                index = i;
-                update();
+            prev?.addEventListener("click", e => {
+                e.preventDefault();
                 stopAuto();
+                index = (index - 1 + images.length) % images.length;
+                update();
+            });
+
+            thumbs.forEach((t, i) => {
+                t.addEventListener("click", () => {
+                    index = i;
+                    update();
+                    stopAuto();
+                });
+            });
+
+            container.addEventListener("mouseenter", stopAuto);
+            container.addEventListener("mouseleave", startAuto);
+
+            update();
+            startAuto();
+        });
+    })();
+
+
+    // ======================================================
+    // 8. SIZE + COLOR SELECTORS
+    // ======================================================
+    (() => {
+        // Size
+        const sizeBtns = document.querySelectorAll(".pd-size-option");
+        const sizeInput = document.getElementById("selectedSize");
+
+        sizeBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                sizeBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                if (sizeInput) sizeInput.value = btn.dataset.size;
             });
         });
 
-        container.addEventListener("mouseenter", stopAuto);
-        container.addEventListener("mouseleave", startAuto);
+        // Color
+        const colorBtns = document.querySelectorAll(".pd-color-option");
+        const colorInput = document.getElementById("selectedColor");
 
-        startAuto();
-    });
+        colorBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                colorBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                if (colorInput) colorInput.value = btn.dataset.color;
+            });
+        });
+    })();
 
-});
-
-
-// ======================================================
-// SIZE & COLOR SELECTORS (Product Detail Page UI)
-// ======================================================
-
-// SIZE BUTTONS — highlight selected size and store hidden input
-document.querySelectorAll(".pd-size-option")?.forEach(btn => {
-    btn.addEventListener("click", () => {
-
-        // Remove active from all buttons
-        document.querySelectorAll(".pd-size-option")
-            .forEach(el => el.classList.remove("active"));
-
-        // Activate the clicked option
-        btn.classList.add("active");
-
-        // Store selected size in hidden input for form submission
-        document.getElementById("selectedSize").value = btn.dataset.size;
-    });
-});
-
-// COLOR BUTTONS — highlight selected color and store hidden input
-document.querySelectorAll(".pd-color-option")?.forEach(c => {
-    c.addEventListener("click", () => {
-
-        // Remove active from all color buttons
-        document.querySelectorAll(".pd-color-option")
-            .forEach(el => el.classList.remove("active"));
-
-        // Activate the clicked option
-        c.classList.add("active");
-
-        // Store selected color in hidden input
-        document.getElementById("selectedColor").value = c.dataset.color;
-    });
 });

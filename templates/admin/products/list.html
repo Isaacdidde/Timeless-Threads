@@ -1,0 +1,304 @@
+{% extends "admin/layout/base_admin.html" %}
+{% block content %}
+
+<style>
+/* ---- GLOBAL DARK THEME FIXES ---- */
+body, html, label, span, p, small, .form-label, h1,h2,h3,h4,h5,h6 {
+    color: #f0f6fc !important;
+}
+.text-muted { color: #9baec8 !important; }
+a { color: #58a6ff !important; }
+a:hover { color: #79c0ff !important; }
+
+/* ---- METRICS ---- */
+.metric-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    padding: 14px 18px;
+    border-radius: 12px;
+    min-width: 160px;
+    color: #c9d1d9;
+}
+.metric-value { font-size: 22px; font-weight: 700; color: #f0f6fc; }
+
+/* ---- PRODUCT CARD ---- */
+.product-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: .25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.product-card:hover {
+    border-color: #58a6ff;
+    transform: translateY(-6px);
+    box-shadow: 0 6px 14px rgba(56,139,253,.35);
+}
+.product-image {
+    width: 100%;
+    height: 230px;
+    object-fit: cover;
+    background: #1f242d;
+    border-bottom: 1px solid #30363d;
+}
+
+/* ---- FEATURED BADGE ---- */
+.featured-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: gold;
+    color: black;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    box-shadow: 0 0 8px rgba(255,215,0,0.6);
+}
+
+.featured-btn {
+    background: #FFD700 !important;
+    color: #000 !important;
+    font-weight: 600;
+}
+
+/* ---- FILTER BOX FIX ---- */
+.filter-box {
+    background: #161b22;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+
+.filter-box label {
+    white-space: nowrap;
+}
+
+#searchInput {
+    flex: 1;
+    min-width: 220px;
+}
+</style>
+
+
+<!-- ========================= PAGE HEADER ========================= -->
+<div class="d-flex align-items-center mb-4 gap-3">
+    <div style="flex:1">
+        <h3 class="fw-bold mb-0">Products</h3>
+        <p class="text-muted small mb-0">Manage all products in your store</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin_product.add_product') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Product
+        </a>
+        <a href="{{ url_for('admin_category.list_categories') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-grid"></i> Categories
+        </a>
+    </div>
+</div>
+
+
+<!-- ========================= METRICS ========================= -->
+<div class="metrics d-flex gap-3 mb-4">
+    <div class="metric-card">
+        <div class="text-muted small">Total Products</div>
+        <div class="metric-value">{{ products|length }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="text-muted small">Categories</div>
+        <div class="metric-value">{{ categories|length }}</div>
+    </div>
+</div>
+
+
+<!-- ========================= FILTER BAR ========================= -->
+<div class="filter-box">
+    <label class="fw-semibold">Filter by Category:</label>
+    <select id="filterCategory">
+        <option value="all">All Categories</option>
+        {% for c in categories %}
+        <option value="{{ c.slug }}">{{ c.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label class="fw-semibold">Search:</label>
+    <input id="searchInput" class="form-control" style="max-width:260px;" placeholder="Search by name...">
+</div>
+
+
+<!-- ========================= PRODUCT GRID ========================= -->
+<div class="row g-4" id="productGrid">
+
+{% for p in products %}
+{% set img = p.primary_image or (p.images[0] if p.images else None) %}
+
+<div class="col-xl-3 col-lg-4 col-md-6 product-item"
+     data-category="{{ p.category_slug }}"
+     data-name="{{ p.name | lower }}">
+
+    <div class="product-card">
+
+        {% if p.featured %}
+        <div class="featured-badge">⭐ Featured</div>
+        {% endif %}
+
+        {% if img %}
+        <img src="{{ url_for('static', filename='uploads/products/' ~ img) }}"
+             class="product-image">
+        {% else %}
+        <div class="product-image d-flex justify-content-center align-items-center text-muted">
+            No Image
+        </div>
+        {% endif %}
+
+        <div class="p-3 d-flex flex-column">
+
+            <div>
+                <div class="product-title">{{ p.name }}</div>
+
+                <div class="product-meta">
+                    ₹{{ p.price }}
+                    {% if p.discount %}
+                    <span class="badge-discount">{{ p.discount }}% off</span>
+                    {% endif %}
+                </div>
+
+                <div class="product-meta">Stock: {{ p.stock }}</div>
+            </div>
+
+            <!-- FEATURED BUTTON -->
+            <button class="btn btn-sm mt-2 w-100 {% if p.featured %}featured-btn{% else %}btn-outline-warning{% endif %}"
+                    onclick="toggleFeatured('{{ p._id }}', this)">
+                {% if p.featured %}
+                ⭐ Remove Featured
+                {% else %}
+                ⭐ Mark as Featured
+                {% endif %}
+            </button>
+
+            <div class="mt-3 d-flex gap-2">
+                <a href="{{ url_for('admin_product.edit_product', id=p._id) }}"
+                   class="btn btn-warning btn-sm w-50">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+
+                <button class="btn btn-danger btn-sm w-50"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteProductModal"
+                        data-id="{{ p._id }}"
+                        data-name="{{ p.name }}">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+
+<!-- ========================= DELETE MODAL ========================= -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#161b22; border:1px solid #30363d;">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Product</h5>
+        <button class="btn-close" style="filter:invert(1)" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <p id="deleteModalText">Are you sure?</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a id="confirmDeleteBtn" class="btn btn-danger">Delete</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ====================== CATEGORY FILTER ====================== */
+document.getElementById("filterCategory").addEventListener("change", function () {
+    let value = this.value;
+    document.querySelectorAll(".product-item").forEach(card => {
+        let cat = card.dataset.category;
+        card.style.display = (value === "all" || value === cat) ? "" : "none";
+    });
+});
+
+/* ====================== SEARCH FILTER ====================== */
+document.getElementById("searchInput").addEventListener("keyup", function () {
+    let q = this.value.toLowerCase().trim();
+    document.querySelectorAll(".product-item").forEach(card => {
+        let name = card.dataset.name;
+        card.style.display = name.includes(q) ? "" : "none";
+    });
+});
+
+/* ====================== DELETE MODAL ====================== */
+const modal = document.getElementById("deleteProductModal");
+modal.addEventListener("show.bs.modal", evt => {
+    const btn = evt.relatedTarget;
+    const prodId = btn.getAttribute("data-id");
+    const prodName = btn.getAttribute("data-name");
+
+    document.getElementById("deleteModalText").innerText =
+        `Delete product "${prodName}" permanently?`;
+
+    const url = "{{ url_for('admin_product.delete_product', id='__ID__') }}";
+    document.getElementById("confirmDeleteBtn").href = url.replace("__ID__", prodId);
+});
+
+
+/* ========================= FEATURED AJAX ========================= */
+function toggleFeatured(id, btn) {
+
+    fetch(`/admin/products/featured/${id}`, {
+        method: "POST"
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) return;
+
+        if (d.featured === true) {
+            btn.classList.add("featured-btn");
+            btn.classList.remove("btn-outline-warning");
+            btn.innerHTML = "⭐ Remove Featured";
+
+            const card = btn.closest(".product-card");
+            if (card && !card.querySelector(".featured-badge")) {
+                const badge = document.createElement("div");
+                badge.className = "featured-badge";
+                badge.innerText = "⭐ Featured";
+                card.appendChild(badge);
+            }
+
+        } else {
+            btn.classList.remove("featured-btn");
+            btn.classList.add("btn-outline-warning");
+            btn.innerHTML = "⭐ Mark as Featured";
+
+            const badge = btn.closest(".product-card").querySelector(".featured-badge");
+            if (badge) badge.remove();
+        }
+    });
+}
+</script>
+
+{% endblock %}

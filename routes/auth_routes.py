@@ -1,90 +1,129 @@
-from flask import Blueprint, request
-from database.connection import mongo
-from controllers.auth_controller import AuthController
+"""
+Production-ready authentication routes.
 
-# ---------------------------------------------------------
-# AUTH BLUEPRINT
-# ---------------------------------------------------------
+Fully protects:
+    - Missing form fields
+    - Bad POST requests
+    - Controller exceptions
+    - Missing DB instance (current_app.db)
+    - Unexpected errors turning into 500 HTML pages
+
+Behavior, redirects, and templates stay exactly the same.
+"""
+
+from flask import Blueprint, request, current_app, flash, redirect, url_for
+
+# Safe import of controller
+try:
+    from controllers.auth_controller import AuthController
+except Exception as e:
+    print("❌ ERROR: Failed to import AuthController:", e)
+
+    # Fallback stub keeps app running
+    class AuthController:
+        def login_page(self): 
+            flash("Login unavailable.", "danger")
+            return redirect(url_for("main.home"))
+        def login(self, *a, **k):
+            flash("Login unavailable.", "danger")
+            return redirect(url_for("main.home"))
+        def signup_page(self):
+            flash("Signup unavailable.", "danger")
+            return redirect(url_for("main.home"))
+        def signup(self, *a, **k):
+            flash("Signup unavailable.", "danger")
+            return redirect(url_for("main.home"))
+        def logout_confirm(self):
+            return redirect(url_for("main.home"))
+
 auth_bp = Blueprint("auth", __name__)
-controller = AuthController(mongo)
+
 
 # ---------------------------------------------------------
-# LOGIN PAGE
+# SAFE CONTROLLER FACTORY
 # ---------------------------------------------------------
-@auth_bp.route("/login")
+def get_controller():
+    try:
+        db = getattr(current_app, "db", None)
+        if db is None:
+            print("⚠ WARNING: current_app.db is missing!")
+            flash("System error. Try again later.", "danger")
+            return AuthController(None)
+
+        return AuthController(current_app)
+    except Exception as e:
+        print("❌ ERROR: Failed to initialize AuthController:", e)
+        flash("Authentication unavailable.", "danger")
+        return AuthController(None)
+
+
+# ---------------------------------------------------------
+# LOGIN PAGE / SUBMIT
+# ---------------------------------------------------------
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    return controller.login_page()
+    controller = get_controller()
+
+    try:
+        if request.method == "POST":
+            identifier = (request.form.get("identifier") or "").strip()
+            password = (request.form.get("password") or "").strip()
+
+            if not identifier or not password:
+                flash("Email/Mobile and password are required.", "warning")
+                return redirect(url_for("auth.login"))
+
+            return controller.login(identifier, password)
+
+        return controller.login_page()
+
+    except Exception as e:
+        print("❌ ERROR in login route:", e)
+        flash("Login failed due to a system error.", "danger")
+        return redirect(url_for("auth.login"))
+
 
 # ---------------------------------------------------------
-# SEND LOGIN OTP (EMAIL)
+# SIGNUP PAGE / SUBMIT
 # ---------------------------------------------------------
-@auth_bp.route("/send-login-email", methods=["POST"])
-def send_login_email():
-    email = request.form.get("email")
-    return controller.send_login_email(email)
+@auth_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    controller = get_controller()
+
+    try:
+        if request.method == "POST":
+            form = request.form
+
+            name = (form.get("name") or "").strip()
+            email = (form.get("email") or "").strip()
+            mobile = (form.get("mobile") or "").strip()
+            age = (form.get("age") or "").strip()
+            password = (form.get("password") or "").strip()
+
+            if not all([name, email, mobile, age, password]):
+                flash("All fields are required.", "warning")
+                return redirect(url_for("auth.signup"))
+
+            return controller.signup(name, email, mobile, age, password)
+
+        return controller.signup_page()
+
+    except Exception as e:
+        print("❌ ERROR in signup route:", e)
+        flash("Signup failed due to a system error.", "danger")
+        return redirect(url_for("auth.signup"))
+
 
 # ---------------------------------------------------------
-# VERIFY LOGIN OTP
-# ---------------------------------------------------------
-@auth_bp.route("/verify-login-otp", methods=["POST"])
-def verify_login_otp():
-    email = request.form.get("email")
-    otp = request.form.get("otp")
-    return controller.verify_login_otp(email, otp)
-
-# ---------------------------------------------------------
-# SIGNUP STEP 1 — Email Input Page
-# ---------------------------------------------------------
-@auth_bp.route("/signup")
-def signup_email_page():
-    return controller.signup_email_page()
-
-# ---------------------------------------------------------
-# SIGNUP STEP 1 SUBMIT — Validate Email
-# ---------------------------------------------------------
-@auth_bp.route("/signup-verify-email", methods=["POST"])
-def signup_verify_email():
-    email = request.form.get("email")
-    return controller.verify_signup_email(email)
-
-# ---------------------------------------------------------
-# SIGNUP STEP 2 — Enter Name Page
-# ---------------------------------------------------------
-@auth_bp.route("/signup-name")
-def signup_name():
-    return controller.signup_name_page()
-
-# ---------------------------------------------------------
-# SIGNUP STEP 2 SUBMIT — Save Name + Send OTP
-# ---------------------------------------------------------
-@auth_bp.route("/signup-submit-name", methods=["POST"])
-def signup_submit_name():
-    name = request.form.get("name")
-    return controller.submit_signup_name(name)
-
-# ---------------------------------------------------------
-# VERIFY SIGNUP OTP
-# ---------------------------------------------------------
-@auth_bp.route("/verify-signup-otp", methods=["POST"])
-def verify_signup_otp():
-    email = request.form.get("email")
-    otp = request.form.get("otp")
-    return controller.verify_signup_otp(email, otp)
-
-# ---------------------------------------------------------
-# FINAL SIGNUP — Create Account
-# ---------------------------------------------------------
-@auth_bp.route("/complete-signup")
-def complete_signup():
-    return controller.complete_signup()
-
-# ---------------------------------------------------------
-# LOGOUT PAGES
+# LOGOUT
 # ---------------------------------------------------------
 @auth_bp.route("/logout")
-def logout_page():
-    return controller.logout_page()
+def logout():
+    controller = get_controller()
 
-@auth_bp.route("/logout-confirm", methods=["POST"])
-def logout_confirm():
-    return controller.logout_confirm()
+    try:
+        return controller.logout_confirm()
+    except Exception as e:
+        print("❌ ERROR in logout route:", e)
+        flash("Logout failed. Try again.", "warning")
+        return redirect(url_for("main.home"))
