@@ -5,8 +5,10 @@ import logging
 from flask import Flask
 
 from config import Config, DevelopmentConfig
+from seed_admin import seed_admin_user
+
 from database.connection import init_db
-from config.seed_admin import seed_admin_user
+
 
 
 class AppFactory:
