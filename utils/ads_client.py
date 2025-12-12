@@ -102,7 +102,7 @@ def fetch_ad(slot_id: str):
         url = f"{base_url}/api/ads/slot/{slot_id}"
 
         try:
-            response = requests.get(url, timeout=0.15)
+            response = requests.get(url, timeout=5)
         except Exception:
             # Network unreachable → store temporary None
             AD_CACHE[slot_id] = (None, now)
