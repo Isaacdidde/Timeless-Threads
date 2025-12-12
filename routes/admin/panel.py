@@ -20,10 +20,13 @@ def dashboard():
             print(f"⚠ WARNING: Failed to load collection '{name}':", e)
             return None
 
+    # Existing users collection
     users_col = safe_col("db.users")
-    advertisers_col = safe_col("advertisers")
-    campaigns_col = safe_col("campaigns")
-    clicks_col = safe_col("ad_clicks")
+
+    # New required collections
+    categories_col = safe_col("categories")
+    products_col = safe_col("products")
+    orders_col = safe_col("orders")
 
     # -------------------------------------------------------------------
     # SAFE COUNT FUNCTION
@@ -41,40 +44,9 @@ def dashboard():
     # BASIC COUNTS
     # -------------------------------------------------------------------
     total_customers = safe_count(users_col)
-    total_advertisers = safe_count(advertisers_col)
-    total_campaigns = safe_count(campaigns_col)
-    total_clicks = safe_count(clicks_col)
-
-    # -------------------------------------------------------------------
-    # TODAY'S CLICKS
-    # -------------------------------------------------------------------
-    today = datetime.now().strftime("%Y-%m-%d")
-    try:
-        today_clicks = clicks_col.count_documents({"date": today}) if clicks_col else 0
-    except Exception as e:
-        print("⚠ WARNING: Failed to count today's clicks:", e)
-        today_clicks = 0
-
-    # -------------------------------------------------------------------
-    # SLOT PERFORMANCE
-    # -------------------------------------------------------------------
-    slot_names = []
-    slot_clicks = []
-
-    if clicks_col is not None:
-        try:
-            slot_data = clicks_col.aggregate([
-                {"$group": {"_id": "$slot", "count": {"$sum": 1}}},
-                {"$sort": {"count": -1}}
-            ])
-
-            for s in slot_data:
-                slot_names.append(s.get("_id", "unknown"))
-                slot_clicks.append(s.get("count", 0))
-        except Exception as e:
-            print("⚠ WARNING: Slot performance aggregation failed:", e)
-    else:
-        print("⚠ WARNING: clicks_col unavailable for slot performance.")
+    total_categories = safe_count(categories_col)
+    total_products = safe_count(products_col)
+    total_orders = safe_count(orders_col)
 
     # -------------------------------------------------------------------
     # NEW USERS IN LAST 7 DAYS
@@ -88,10 +60,17 @@ def dashboard():
 
             user_stats = users_col.aggregate([
                 {"$match": {"created_at": {"$gte": last7}}},
-                {"$group": {
-                    "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
-                    "count": {"$sum": 1}
-                }},
+                {
+                    "$group": {
+                        "_id": {
+                            "$dateToString": {
+                                "format": "%Y-%m-%d",
+                                "date": "$created_at"
+                            }
+                        },
+                        "count": {"$sum": 1}
+                    }
+                },
                 {"$sort": {"_id": 1}}
             ])
 
@@ -101,6 +80,7 @@ def dashboard():
 
         except Exception as e:
             print("⚠ WARNING: Failed to fetch last 7 days user stats:", e)
+
     else:
         print("⚠ WARNING: users_col unavailable for user stats.")
 
@@ -110,12 +90,9 @@ def dashboard():
     return render_template(
         "admin/dashboard.html",
         total_customers=total_customers,
-        total_advertisers=total_advertisers,
-        total_campaigns=total_campaigns,
-        total_clicks=total_clicks,
-        today_clicks=today_clicks,
-        slot_names=slot_names,
-        slot_clicks=slot_clicks,
+        total_categories=total_categories,
+        total_products=total_products,
+        total_orders=total_orders,
         users_days=users_days,
         users_counts=users_counts
     )

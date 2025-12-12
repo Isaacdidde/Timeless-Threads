@@ -121,18 +121,24 @@ class UserModel:
         if self.col is None:
             return False
 
+    # Convert user_id to ObjectId safely
         try:
             oid = user_id if isinstance(user_id, ObjectId) else ObjectId(user_id)
-        except InvalidId:
-            print(f"⚠ WARNING: Invalid user_id '{user_id}'")
-            return False
         except Exception as e:
-            print("⚠ WARNING: Error parsing user_id:", e)
+            print(f"⚠ WARNING: Invalid user_id '{user_id}':", e)
             return False
 
         try:
-            self.col.update_one({"_id": oid}, {"$set": fields})
+        # If caller already provided a Mongo operator (e.g., {"$set": {...}})
+            if any(key.startswith("$") for key in fields.keys()):
+                update_doc = fields
+            else:
+            # Normal field dictionary → wrap in $set
+                update_doc = {"$set": fields}
+
+            self.col.update_one({"_id": oid}, update_doc)
             return True
+
         except Exception as e:
             print(f"❌ ERROR: Failed to update user '{user_id}':", e)
             return False

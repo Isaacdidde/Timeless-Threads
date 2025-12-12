@@ -88,7 +88,7 @@ def update_profile():
             {"_id": oid},
             {"$set": {"name": name, "mobile": mobile}}
         )
-        session["user_name"] = name
+        session["user_name"] = name  # Update navbar name
         flash("Profile updated successfully!", "success")
     except Exception as e:
         print("❌ ERROR: Failed to update profile:", e)
@@ -98,7 +98,7 @@ def update_profile():
 
 
 # ---------------------------------------------------------
-# ADDRESS PAGE
+# ADDRESS PAGE  (Legacy API — no longer used by navbar)
 # ---------------------------------------------------------
 @user_bp.route("/address")
 def address_page():
@@ -123,7 +123,7 @@ def address_page():
 
 
 # ---------------------------------------------------------
-# SAVE ADDRESS
+# SAVE ADDRESS  (WORKING PATCHED VERSION)
 # ---------------------------------------------------------
 @user_bp.route("/save-address", methods=["POST"])
 def save_address():
@@ -146,7 +146,7 @@ def save_address():
 
     if not address["city"] or not address["pincode"]:
         flash("City and pincode are required.", "warning")
-        return redirect(url_for("user.address_page"))
+        return redirect(url_for("user.profile_page"))
 
     users = get_collection("users")
 
@@ -160,11 +160,11 @@ def save_address():
         print("❌ ERROR: Failed to save address:", e)
         flash("Could not save the address.", "danger")
 
-    return redirect(url_for("user.address_page"))
+    return redirect(url_for("user.profile_page"))
 
 
 # ---------------------------------------------------------
-# CHANGE PASSWORD PAGE  (GET)
+# CHANGE PASSWORD PAGE (GET) — *Not used anymore by navbar*
 # ---------------------------------------------------------
 @user_bp.route("/change-password", methods=["GET"])
 def change_password_page():
@@ -174,7 +174,7 @@ def change_password_page():
 
 
 # ---------------------------------------------------------
-# CHANGE PASSWORD SUBMIT (POST)
+# CHANGE PASSWORD SUBMIT (POST) — FULLY PATCHED
 # ---------------------------------------------------------
 @user_bp.route("/change-password", methods=["POST"])
 def change_password_submit():
@@ -195,19 +195,19 @@ def change_password_submit():
 
     if len(new_password) < 6:
         flash("New password must be at least 6 characters.", "warning")
-        return redirect(url_for("user.change_password_page"))
+        return redirect(url_for("user.profile_page"))
 
-    # Verify old password
+    # Validate old password
     try:
         if not check_password_hash(user.get("password", ""), old_password):
             flash("Old password is incorrect!", "danger")
-            return redirect(url_for("user.change_password_page"))
+            return redirect(url_for("user.profile_page"))
     except Exception as e:
-        print("⚠ WARNING: Password validation failed:", e)
-        flash("Password check failed.", "danger")
-        return redirect(url_for("user.change_password_page"))
+        print("⚠ WARNING: Password check failed:", e)
+        flash("Password verification failed.", "danger")
+        return redirect(url_for("user.profile_page"))
 
-    # Save new password
+    # Save new password safely
     try:
         hashed = generate_password_hash(new_password)
         user_model.update(user_id, {"password": hashed})

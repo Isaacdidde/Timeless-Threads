@@ -50,11 +50,12 @@ def get_controller():
             flash("System error. Try again later.", "danger")
             return AuthController(None)
 
-        return AuthController(current_app)
+        return AuthController(db)   # ← FIXED
     except Exception as e:
         print("❌ ERROR: Failed to initialize AuthController:", e)
         flash("Authentication unavailable.", "danger")
         return AuthController(None)
+
 
 
 # ---------------------------------------------------------

@@ -50,6 +50,16 @@
     {% set images = ['no_image.jpg'] %}
 {% endif %}
 
+{% if ads['product_detail_banner'] %}
+<div class="product-detail-banner-wrapper" style="margin: 20px 0;">
+    {% set ad = ads['product_detail_banner'] %}
+    {% include "ads/product_detail_banner.html" %}
+</div>
+{% endif %}
+
+
+
+
 <div class="container luxury">
     <div class="lux-row">
 
@@ -208,14 +218,8 @@
 
     </div>
 
-    <!-- PRODUCT DETAIL BANNER AD -->
-    {% if ads.product_detail_banner %}
-    <div class="mt-4">
-        {% with ad = ads.product_detail_banner %}
-            {% include "ads/inject_ad_slot.html" %}
-        {% endwith %}
-    </div>
-    {% endif %}
+    
+
 
     <!-- ============================================================
          REVIEWS

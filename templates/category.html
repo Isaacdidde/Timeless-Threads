@@ -12,7 +12,6 @@
     </a>
 </div>
 
-
 <!-- PRODUCT GRID -->
 <div class="row g-4">
 
@@ -20,30 +19,25 @@
 
     {% for item in products %}
 
-        {# ----------------------------------------------------
-           BUILD CLEAN IMAGE LIST
-        ----------------------------------------------------- #}
-
+        {# ==========================================================
+           CLEAN IMAGE LIST
+        =========================================================== #}
         {% set imgs = [] %}
 
-        {# 1. images[] list #}
         {% for im in item.get("images", []) %}
             {% if im %} {% set imgs = imgs + [im] %} {% endif %}
         {% endfor %}
 
-        {# 2. primary_image #}
         {% if item.get("primary_image") %}
             {% set imgs = [item.primary_image] + imgs %}
         {% endif %}
 
-        {# 3. fallback single-image fields #}
         {% for key in ["image", "image2", "image3"] %}
             {% if item.get(key) %}
                 {% set imgs = imgs + [item[key]] %}
             {% endif %}
         {% endfor %}
 
-        {# 4. default placeholder #}
         {% if imgs|length == 0 %}
             {% set imgs = ["no_image.jpg"] %}
         {% endif %}
@@ -51,39 +45,24 @@
         {% set main_img = imgs[0] %}
         {% set img_prefix = "uploads/products/" %}
 
-        {# Build full URLs for slideshow #}
         {% set full_imgs = [] %}
         {% for fn in imgs %}
-            {% set full_imgs = full_imgs + [
-                url_for('static', filename=img_prefix ~ fn)
-            ] %}
+            {% set full_imgs = full_imgs + [ url_for('static', filename=img_prefix ~ fn) ] %}
         {% endfor %}
 
+        {# ==========================================================
+           AD INSERTION LOGIC — based on product index
+        =========================================================== #}
+        {% if small_ad %}
+            {% if loop.index0 == 4 or (loop.index0 > 4 and (loop.index0 - 4) % 8 == 0) %}
+                <div class="col-6 col-md-3">
+    {% with ad = small_ad %}
+        {% include "ads/card_ad.html" %}
+    {% endwith %}
+</div>
 
-        {# ----------------------------------------------------
-           INLINE ADS
-        ----------------------------------------------------- #}
-
-        {% if ads and loop.index0 == 4 %}
-            <div class="col-12 my-3">
-                {% if ads.card_small %}
-                    {% with ad = ads.card_small %}
-                        {% include "ads/inject_ad_slot.html" %}
-                    {% endwith %}
-                {% endif %}
-            </div>
+            {% endif %}
         {% endif %}
-
-        {% if ads and loop.index % 8 == 0 %}
-            <div class="col-12 my-4">
-                {% if ads.product_inline %}
-                    {% with ad = ads.product_inline %}
-                        {% include "ads/inject_ad_slot.html" %}
-                    {% endwith %}
-                {% endif %}
-            </div>
-        {% endif %}
-
 
         <!-- ======================================================
              PRODUCT CARD
@@ -104,15 +83,12 @@
                     <button class="prod-slide-btn prod-next">❯</button>
                 </div>
 
-
-                <!-- PRODUCT DETAIL LINK (correct endpoint!) -->
+                <!-- PRODUCT DETAIL LINK -->
                 <a class="stretched-link"
                    href="{{ url_for('product.product_detail',
                         slug_or_id=item.slug or item._id|string) }}">
                 </a>
 
-
-                <!-- PRODUCT TEXT -->
                 <div class="p-3">
                     <h6 class="mb-1 fw-semibold product-name text-truncate">
                         {{ item.name }}
@@ -124,9 +100,7 @@
                     {% if discount > 0 %}
                         {% set original = (price / (1 - discount/100)) | round(0, 'ceil') %}
                         <div class="price mt-1">
-                            <span class="text-muted text-decoration-line-through me-2">
-                                ₹{{ original }}
-                            </span>
+                            <span class="text-muted text-decoration-line-through me-2">₹{{ original }}</span>
                             <span class="fw-bold text-danger">₹{{ price }}</span>
                             <span class="badge bg-success ms-2">{{ discount }}% OFF</span>
                         </div>
@@ -152,8 +126,6 @@
 
 {% endif %}
 </div>
-
-
 
 <!-- ======================================================
      SLIDESHOW SCRIPT

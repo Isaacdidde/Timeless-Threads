@@ -21,41 +21,54 @@ def register_context_processors(app):
         # LOAD CATEGORIES (fail-safe)
         # ---------------------------------------------------
         try:
-           cat_col = get_collection("categories")
-           if cat_col is not None:
+            cat_col = get_collection("categories")
+            if cat_col is not None:
                 categories = list(cat_col.find().sort("name", 1))
-           else:
+            else:
                 categories = []
         except Exception as e:
-           print("⚠ WARNING: Failed to load categories:", e)
-           categories = []
-
+            print("⚠ WARNING: Failed to load categories:", e)
+            categories = []
 
         # ---------------------------------------------------
         # LOAD ADS FROM DCORP (fail-safe per-slot)
+        # AND FORCE slot_id (required by inject_ad_slot.html)
         # ---------------------------------------------------
-        ads = {
-            "home_banner": None,
-            "featured_banner": None,
-            "product_detail_banner": None,
-            "product_inline": None,
-            "card_small": None,
-            "login_page_ad": None,
-            "search_banner": None,
-        }
 
-        for slot in ads:
+        slot_names = [
+            "home_banner",
+            "featured_banner",
+            "product_detail_banner",
+            "product_inline",
+            "card_small",
+            "login_page_ad",
+            "search_banner",
+        ]
+
+        ads = {}
+
+        for slot in slot_names:
             try:
-                ads[slot] = fetch_ad(slot)
+                ad = fetch_ad(slot)
+
+                # 🟢 FIX: Always inject slot_id into the ad object
+                if ad:
+                    ad["slot_id"] = slot
+
+                ads[slot] = ad
+
             except Exception as e:
                 print(f"⚠ WARNING: Ad fetch failed for slot '{slot}':", e)
                 ads[slot] = None
 
+        # ---------------------------------------------------
+        # RETURN GLOBAL TEMPLATE VARIABLES
+        # ---------------------------------------------------
         return dict(
             site_categories=categories,
-            ads=ads
+            ads=ads,
+            config=app.config
         )
-
 
 # =====================================================================
 # MAIN CONTROLLER – Homepage, Search, Static Pages

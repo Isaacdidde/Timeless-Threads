@@ -1,22 +1,87 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="container mt-5" style="max-width: 420px;">
+{% block styles %}
+<style>
+  body {
+    background: linear-gradient(135deg, #eef2f7 0%, #ffffff 100%);
+  }
 
-  <h3 class="mb-4 text-center fw-bold">Admin Login</h3>
+  .admin-login-wrapper {
+    max-width: 420px;
+    margin: 80px auto;
+    padding: 40px 35px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    border-radius: 18px;
+    border: 1px solid rgba(200, 200, 200, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .admin-title {
+    font-family: "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .admin-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 14px;
+  }
+
+  .form-control {
+    border-radius: 12px !important;
+    padding: 12px;
+    border: 1px solid #d7dce2;
+  }
+  .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+  }
+
+  .admin-btn {
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    background: #0d6efd;
+    border: none;
+    transition: 0.2s ease;
+  }
+  .admin-btn:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+{% endblock %}
+
+<div class="admin-login-wrapper">
+
+  <h3 class="admin-title">Admin Login</h3>
+  <p class="admin-subtitle">Access your admin dashboard securely</p>
 
   <form method="POST">
+
     <div class="mb-3">
-      <label>Email</label>
+      <label class="fw-semibold">Email</label>
       <input type="email" name="email" class="form-control" required>
     </div>
 
     <div class="mb-3">
-      <label>Password</label>
+      <label class="fw-semibold">Password</label>
       <input type="password" name="password" class="form-control" required>
     </div>
 
-    <button class="btn btn-primary w-100">Login</button>
+    <button class="btn admin-btn w-100 mt-2">Login</button>
   </form>
 
 </div>

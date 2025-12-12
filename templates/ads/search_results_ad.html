@@ -38,8 +38,9 @@
 <script>
 (function () {
     try {
-        // ⭐ Always send tracking requests to Dcorp backend
-        const root = "http://127.0.0.1:5000";
+        // ⭐ ALWAYS track using the configured DCORP backend (local or Render)
+        const root = "{{ config.get('DCORP_API_URL', '') }}".trim() 
+                     || window.location.origin;
 
         const wrap = document.currentScript.previousElementSibling;
         if (!wrap) return;
@@ -49,7 +50,7 @@
 
         if (!link) return;
 
-        // NEW → backend uses campaign_id (not ad_id)
+        // Backend uses campaign_id + slot_id
         const campaignId = link.dataset.campaignId || null;
         const slotId     = link.dataset.slotId || null;
 
@@ -69,10 +70,12 @@
             }).catch(() => {});
         }
 
-        // Track impression when image loads
-        img.complete
-            ? sendImpression()
-            : img.addEventListener("load", sendImpression);
+        // Track when image loads
+        if (img) {
+            img.complete
+                ? sendImpression()
+                : img.addEventListener("load", sendImpression);
+        }
 
         // ----------------------------
         // CLICK TRACKING
@@ -93,5 +96,6 @@
     }
 })();
 </script>
+
 
 {% endif %}

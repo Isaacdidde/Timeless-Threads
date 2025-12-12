@@ -121,7 +121,8 @@
         ====================================================== -->
         <div class="tab-pane fade" id="password">
 
-            <form action="{{ url_for('user.update_password') }}" method="post">
+            <!-- FIX APPLIED HERE -->
+            <form action="{{ url_for('user.change_password_submit') }}" method="post">
 
                 <div class="mb-3">
                     <label class="fw-semibold">Current Password</label>

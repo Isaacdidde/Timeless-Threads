@@ -54,8 +54,9 @@
 <script>
 (function () {
     try {
-        // ⭐ Always track against Dcorp backend
-        const root = "http://127.0.0.1:5000";
+        // ⭐ ALWAYS track against DCORP backend (auto from Flask)
+        const root = "{{ config.get('DCORP_API_URL', '') }}".trim() 
+                     || window.location.origin;
 
         const wrap = document.currentScript.previousElementSibling;
         if (!wrap) return;
@@ -85,9 +86,11 @@
             }).catch(() => {});
         }
 
-        img.complete
-            ? sendImpression()
-            : img.addEventListener("load", sendImpression);
+        if (img) {
+            img.complete
+                ? sendImpression()
+                : img.addEventListener("load", sendImpression);
+        }
 
         // -----------------------------
         // CLICK TRACKING
@@ -108,5 +111,6 @@
     }
 })();
 </script>
+
 
 {% endif %}

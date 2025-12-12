@@ -24,46 +24,46 @@
             </div>
         </div>
 
-        <!-- TOTAL ADVERTISERS -->
+        <!-- TOTAL CATEGORIES -->
         <div class="col-md-3">
             <div class="p-4 rounded" style="background:#161b22; border:1px solid #30363d;">
                 <div class="d-flex align-items-center">
                     <div class="me-3">
-                        <i class="bi bi-person-badge" style="font-size:36px; color:#ffa657;"></i>
+                        <i class="bi bi-grid" style="font-size:36px; color:#ffa657;"></i>
                     </div>
                     <div>
-                        <h6 class="mb-1">Total Advertisers</h6>
-                        <h3 class="fw-bold">{{ total_advertisers }}</h3>
+                        <h6 class="mb-1">Total Categories</h6>
+                        <h3 class="fw-bold">{{ total_categories }}</h3>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TOTAL CAMPAIGNS -->
+        <!-- TOTAL PRODUCTS -->
         <div class="col-md-3">
             <div class="p-4 rounded" style="background:#161b22; border:1px solid:#30363d;">
                 <div class="d-flex align-items-center">
                     <div class="me-3">
-                        <i class="bi bi-megaphone" style="font-size:36px; color:#58a6ff;"></i>
+                        <i class="bi bi-box-seam" style="font-size:36px; color:#58a6ff;"></i>
                     </div>
                     <div>
-                        <h6 class="mb-1">Total Campaigns</h6>
-                        <h3 class="fw-bold">{{ total_campaigns }}</h3>
+                        <h6 class="mb-1">Total Products</h6>
+                        <h3 class="fw-bold">{{ total_products }}</h3>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TODAY'S AD CLICKS -->
+        <!-- TOTAL ORDERS -->
         <div class="col-md-3">
             <div class="p-4 rounded" style="background:#161b22; border:1px solid:#30363d;">
                 <div class="d-flex align-items-center">
                     <div class="me-3">
-                        <i class="bi bi-mouse" style="font-size:36px; color:#ffa657;"></i>
+                        <i class="bi bi-receipt" style="font-size:36px; color:#ffa657;"></i>
                     </div>
                     <div>
-                        <h6 class="mb-1">Today's Ad Clicks</h6>
-                        <h3 class="fw-bold">{{ today_clicks }}</h3>
+                        <h6 class="mb-1">Total Orders</h6>
+                        <h3 class="fw-bold">{{ total_orders }}</h3>
                     </div>
                 </div>
             </div>
@@ -96,15 +96,8 @@
             </a>
         </div>
 
-        <!-- ADS MANAGER -->
-        <div class="col-md-3">
-            <a href="{{ url_for('admin_ads.campaigns') }}" class="text-decoration-none text-light">
-                <div class="p-4 rounded text-center" style="background:#21262d; border:1px solid #30363d;">
-                    <i class="bi bi-badge-ad" style="font-size:32px; color:#58a6ff;"></i>
-                    <h6 class="mt-2">Ads Manager</h6>
-                </div>
-            </a>
-        </div>
+        <!-- ADS MANAGER REMOVED -->
+        <!-- (No code added here — simply deleted as requested) -->
 
         <!-- LOGOUT -->
         <div class="col-md-3">

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout_placeholder.css') }}">
+<style>
+
+/* ==============================
+   Modern gradient background
+================================= */
+body {
+  background: linear-gradient(135deg, #f0f4ff, #ffffff);
+}
+
+/* ==============================
+   Centered container
+================================= */
+.checkout-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding-top: 40px;
+}
+
+/* ==============================
+   Glassmorphic card
+================================= */
+.checkout-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 40px;
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  animation: floatCard 4s ease-in-out infinite;
+}
+
+/* Floating animation */
+@keyframes floatCard {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
+}
+
+/* ==============================
+   Typewriter modernized
+================================= */
+.typewriter {
+  color: #1a1a1a;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 3px solid #333;
+  animation: typing 2.5s steps(25), blink 0.7s infinite step-end alternate;
+  margin-bottom: 20px;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to   { width: 100% }
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+/* ==============================
+   Robot styling
+================================= */
+.robot {
+  width: 160px;
+  height: auto;
+  margin-bottom: 20px;
+  animation: gentleBounce 3s ease-in-out infinite;
+}
+
+@keyframes gentleBounce {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+/* ==============================
+   Description text
+================================= */
+.desc {
+  color: #555;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ==============================
+   CTA Button Modern
+================================= */
+.btn-modern {
+  padding: 12px 26px;
+  font-weight: 600;
+  border-radius: 50px;
+  border: none;
+  background: #1a1a1a;
+  color: #fff;
+  transition: 0.25s ease;
+}
+
+.btn-modern:hover {
+  background: #000;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="checkout-wrapper">
+
+  <div class="checkout-card">
+
+    <div class="typewriter">Checkout is Getting Ready...</div>
+
+    <img src="{{ url_for('static', filename='images/robot_loader.gif') }}"
+         class="robot"
+         alt="Loading animation">
+
+    <p class="desc">
+      A seamless and secure checkout experience is in the works.<br>
+      We’re polishing the final details — almost there.
+    </p>
+
+    <a href="{{ url_for('main.home') }}" class="btn btn-modern">
+      Continue Shopping
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}

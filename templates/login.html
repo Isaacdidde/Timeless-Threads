@@ -68,18 +68,23 @@
 
 
 <div class="auth-bg">
+    
+
 
     <!-- ==========================================================
          LOGIN PAGE AD SLOT (slot: login_page_ad)
          Protected with safe-lookup to prevent missing-key errors.
     =========================================================== -->
-    {% if ads and ads.login_page_ad %}
-    <div class="auth-ad-wrapper">
-        {% with ad = ads.login_page_ad %}
-            {% include "ads/inject_ad_slot.html" %}
-        {% endwith %}
-    </div>
-    {% endif %}
+     {% if ads['login_page_ad'] %}
+<div class="auth-ad-wrapper">
+    {% with ad = ads['login_page_ad'] %}
+        {% include "ads/login_page_ad.html" %}
+    {% endwith %}
+</div>
+{% endif %}
+
+
+
 
 
 
@@ -130,6 +135,7 @@
                 Create an Account
             </a>
         </div>
+        
 
     </div>
 

@@ -27,7 +27,7 @@
         // Load base URL from Flask config (injected via template)
         // Falls back to Render or local development automatically.
         // ------------------------------------------------------------
-        const DCORP_API = "{{ current_app.config.get('DCORP_API_URL', '') }}".trim() ||
+        const DCORP_API = "{{ config.DCORP_API_URL }}".trim() ||
                           window.location.origin; // Safe fallback
 
         const wrapper = document.currentScript.previousElementSibling;

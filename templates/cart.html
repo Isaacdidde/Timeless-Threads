@@ -4,43 +4,116 @@
 {% block content %}
 
 <style>
-  .cart-wrapper { max-width: 1000px; margin: auto; }
-  .cart-card {
-    background: #fff; border-radius: 18px; padding: 20px;
-    display: flex; gap: 22px; margin-bottom: 20px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.08); transition: 0.25s;
-  }
-  .cart-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
-  }
-  .cart-img { width: 110px; height: 110px; border-radius: 14px; object-fit: cover; }
-  .variant-chip {
-    padding: 3px 8px; font-size: 13px;
-    background: #f3f4f6; border-radius: 6px; margin-right: 6px;
-  }
-  .qty-box {
-    width: 70px; padding: 6px;
-    border-radius: 8px; border: 1px solid #ddd;
-  }
-  .floating-checkout {
-    position: sticky; bottom: 10px;
-    padding: 16px; background: #ffffffd9;
-    backdrop-filter: blur(10px);
-    border-radius: 14px; box-shadow: 0 4px 18px rgba(0,0,0,0.12);
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 35px;
-  }
+
+/* --------------------------
+   Ultra-modern visual design
+---------------------------*/
+body {
+  background: linear-gradient(135deg, #f8f9fc, #ffffff);
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 25px;
+}
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+  background: #fff;
+}
+
+.cart-wrapper { 
+  max-width: 1000px; 
+  margin: auto; 
+}
+
+.cart-card {
+  background: #ffffffc9;
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.07);
+  backdrop-filter: blur(12px);
+  transition: 0.25s ease;
+}
+
+.cart-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.cart-img { 
+  width: 120px; 
+  height: 120px; 
+  border-radius: 16px; 
+  object-fit: cover; 
+}
+
+.variant-chip {
+  padding: 4px 10px;
+  font-size: 13px;
+  background: #eef0f3;
+  border-radius: 8px;
+  margin-right: 6px;
+}
+
+.qty-box {
+  width: 70px; 
+  padding: 7px;
+  border-radius: 10px; 
+  border: 1px solid #d1d1d1;
+  font-size: 15px;
+}
+
+.floating-checkout {
+  position: sticky;
+  bottom: 12px;
+  padding: 18px;
+  background: #ffffffd2;
+  backdrop-filter: blur(14px);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 35px;
+  border: 1px solid #efefef;
+}
+
+.btn-modern {
+  padding: 10px 26px;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: 0.25s ease;
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+}
+
 </style>
 
 
 <div class="cart-wrapper py-4">
 
-  <h2 class="mb-4 fw-bold">🛍️ Shopping Cart</h2>
+  <!-- Brand Header -->
+  <div class="brand-header">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" class="brand-logo" alt="Brand Logo">
+    <h2 class="fw-bold mb-0">🛍️ Your Shopping Cart</h2>
+  </div>
+
 
   {% if cart_items %}
 
-      {% set grand_total = 0 %}
+      {% set ns = namespace(total=0) %}   {# FIX: namespace for accumulation #}
 
       {% for item in cart_items %}
 
@@ -84,14 +157,13 @@
             {% endif %}
           </div>
 
-          <!-- PRICE -->
-          <div style="font-size:18px; font-weight:600;">
+          <div style="font-size:18px; font-weight:600; color:#111;">
             ₹{{ item.product.price }}
           </div>
 
         </div>
 
-        <!-- ACTIONS -->
+        <!-- ACTION BLOCK -->
         <div style="width:180px; text-align:right;">
 
           <!-- UPDATE QUANTITY -->
@@ -107,40 +179,41 @@
                      value="{{ item.quantity }}"
                      min="1">
 
-              <button class="btn btn-dark btn-sm">Update</button>
+              <button class="btn btn-dark btn-sm btn-modern">Update</button>
             </div>
           </form>
 
           <!-- TOTAL -->
-          <div class="fw-bold mb-2">Total: ₹{{ item.total }}</div>
+          <div class="fw-bold mb-2" style="font-size:16px;">Total: ₹{{ item.total }}</div>
 
           <!-- REMOVE -->
           <form method="post" action="{{ url_for('cart.remove_from_cart') }}">
             <input type="hidden" name="product_id" value="{{ pid }}">
             <input type="hidden" name="size" value="{{ item.size or 'none' }}">
             <input type="hidden" name="color" value="{{ item.color or 'none' }}">
-            <button class="btn btn-outline-danger btn-sm">Remove</button>
+            <button class="btn btn-outline-danger btn-sm btn-modern">Remove</button>
           </form>
 
         </div>
 
       </div>
 
-      {% set grand_total = grand_total + item.total %}
+      {% set ns.total = ns.total + item.total %}
 
       {% endfor %}
 
       <!-- CHECKOUT FLOATING BAR -->
       <div class="floating-checkout mt-3">
 
-        <a href="{{ url_for('main.home') }}" class="btn btn-outline-secondary px-4">
+        <a href="{{ url_for('main.home') }}" class="btn btn-outline-secondary btn-modern px-4">
           ← Continue Shopping
         </a>
 
         <div>
-          <strong style="font-size:20px;">Grand Total: ₹{{ grand_total }}</strong>
+          <strong style="font-size:20px;">Grand Total: ₹{{ ns.total }}</strong>
+
           <a href="{{ url_for('cart.checkout') }}"
-             class="btn btn-success px-4 py-2 ms-3"
+             class="btn btn-success btn-modern px-4 py-2 ms-3"
              style="font-size:17px;">
             Checkout →
           </a>

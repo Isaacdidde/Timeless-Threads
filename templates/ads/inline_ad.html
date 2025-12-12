@@ -58,8 +58,8 @@
 <script>
 (function () {
   try {
-    // ⭐ Always track from DCORP backend
-    const root = "http://127.0.0.1:5000";
+    // ⭐ Always read DCORP API from Flask config
+    const root = "{{ config.get('DCORP_API_URL', '') }}".trim() || window.location.origin;
 
     const wrapper = document.currentScript.previousElementSibling;
     if (!wrapper) return;
@@ -74,9 +74,9 @@
 
     if (!campaignId || !slot) return;
 
-    // ------------------------------------
-    // IMPRESSION TRACK
-    // ------------------------------------
+    // -------------------------------------------------
+    // IMPRESSION
+    // -------------------------------------------------
     function sendImpression() {
       fetch(`${root}/api/ads/track/impression`, {
         method: "POST",
@@ -86,16 +86,12 @@
     }
 
     if (img) {
-      if (img.complete) {
-        sendImpression();
-      } else {
-        img.addEventListener("load", sendImpression);
-      }
+      img.complete ? sendImpression() : img.addEventListener("load", sendImpression);
     }
 
-    // ------------------------------------
-    // CLICK TRACK
-    // ------------------------------------
+    // -------------------------------------------------
+    // CLICK
+    // -------------------------------------------------
     link.addEventListener("click", () => {
       fetch(`${root}/api/ads/track/click`, {
         method: "POST",
@@ -109,5 +105,6 @@
   }
 })();
 </script>
+
 
 {% endif %}

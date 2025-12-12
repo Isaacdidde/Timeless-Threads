@@ -1,0 +1,64 @@
+{% if ad %}
+<div class="tt-product-detail-banner" style="width:100%; margin:20px 0;">
+
+    <a href="{{ ad.redirect_url or '#' }}"
+       target="_blank"
+       class="tt-pd-ad-link"
+       data-campaign-id="{{ ad.campaign_id }}"
+       data-slot-id="{{ ad.slot_id }}"
+       style="display:block; overflow:hidden; border-radius:12px;">
+
+        <img src="{{ ad.image_url }}"
+             alt="{{ ad.headline or 'Sponsored' }}"
+             loading="lazy"
+             style="width:100%; height:auto; display:block; border-radius:12px;"
+             class="tt-pd-ad-img">
+    </a>
+
+    {% if ad.headline %}
+    <p class="text-center mt-2 fw-semibold">{{ ad.headline }}</p>
+    {% endif %}
+
+</div>
+
+<script>
+(function () {
+    try {
+        const root = "{{ config.get('DCORP_API_URL', '') }}".trim() || window.location.origin;
+
+        const container = document.currentScript.previousElementSibling;
+        const link = container.querySelector('.tt-pd-ad-link');
+        const img = container.querySelector('.tt-pd-ad-img');
+
+        if (!link) return;
+
+        const campaignId = link.dataset.campaignId;
+        const slotId = link.dataset.slotId;
+
+        if (!campaignId || !slotId) return;
+
+        function sendImpression() {
+            fetch(`${root}/api/ads/track/impression`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ campaign_id: campaignId, slot_id: slotId })
+            }).catch(() => {});
+        }
+
+        img.complete ? sendImpression() : img.addEventListener("load", sendImpression);
+
+        link.addEventListener("click", () => {
+            fetch(`${root}/api/ads/track/click`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ campaign_id: campaignId, slot_id: slotId })
+            }).catch(() => {});
+        });
+
+    } catch (e) {
+        console.error("pd banner tracking error:", e);
+    }
+})();
+</script>
+
+{% endif %}

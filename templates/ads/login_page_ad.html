@@ -15,7 +15,13 @@
              alt="{{ ad.get('headline') or 'Advertisement' }}"
              class="tt-login-ad-img"
              loading="lazy"
-             style="width:100%; height:auto; display:block;">
+             style="
+                 width:100%;
+                 height:auto;
+                 aspect-ratio: 1080 / 650;   /* preserves correct shape */
+                 object-fit: cover;
+                 display:block;
+             ">
     </a>
 
     {% if ad.get('headline') %}
@@ -29,8 +35,9 @@
 <script>
 (function () {
     try {
-        // ⭐ ALWAYS track impressions/clicks against DCORP backend
-        const root = "http://127.0.0.1:5000";
+        // ⭐ ALWAYS use DCORP API from Flask config (works local + Render)
+        const root = "{{ config.get('DCORP_API_URL', '') }}".trim() || 
+                                            window.location.origin;
 
         const container = document.currentScript.previousElementSibling;
         if (!container) return;
@@ -40,43 +47,41 @@
 
         if (!link) return;
 
-        // Correct dataset names
         const campaignId = link.dataset.campaignId || null;
         const slotId     = link.dataset.slotId || null;
 
         if (!campaignId || !slotId) return;
 
-        // -----------------------------
+        // -------------------------------
         // IMPRESSION TRACKING
-        // -----------------------------
+        // -------------------------------
         function sendImpression() {
             fetch(`${root}/api/ads/track/impression`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     campaign_id: campaignId,
-                    slot_id: slotId
+                    slot_id: slotId,
                 }),
             }).catch(() => {});
         }
 
-        // If image already loaded → track immediately
         if (img) {
             img.complete
                 ? sendImpression()
                 : img.addEventListener("load", sendImpression);
         }
 
-        // -----------------------------
+        // -------------------------------
         // CLICK TRACKING
-        // -----------------------------
+        // -------------------------------
         link.addEventListener("click", () => {
             fetch(`${root}/api/ads/track/click`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     campaign_id: campaignId,
-                    slot_id: slotId
+                    slot_id: slotId,
                 }),
             }).catch(() => {});
         });
@@ -86,4 +91,5 @@
     }
 })();
 </script>
+
 {% endif %}

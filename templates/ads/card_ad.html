@@ -11,7 +11,7 @@
        style="display:block; text-decoration:none; color:inherit;">
 
         <!-- SAME AS PRODUCT CARD HEIGHT RATIO -->
-        <div style="width:100%; position:relative; padding-top:72%; overflow:hidden;">
+        <div style="width:100%; position:relative; padding-top:130%; overflow:hidden;">
             <img src="{{ ad.image_url }}"
                  alt="{{ ad.headline or 'Sponsored' }}"
                  class="tt-ad-img-card"
@@ -33,7 +33,8 @@
 (function () {
     try {
         // ⭐ Always pull API URL from Flask config
-        const root = "{{ current_app.config.get('DCORP_API_URL', '') }}".trim();
+       const root = "{{ dcorp_api }}".trim();
+
         if (!root) return;
 
         const wrapper = document.currentScript.previousElementSibling;

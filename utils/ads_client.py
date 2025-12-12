@@ -21,8 +21,8 @@ from urllib.parse import urljoin
 # ============================================================
 # IN-MEMORY CACHE (per process)
 # ============================================================
-AD_CACHE = {}          # { slot_id: (ad_dict_or_none, timestamp) }
-CACHE_TTL = 20         # seconds
+AD_CACHE = {}           # { slot_id: (ad_dict_or_none, timestamp) }
+CACHE_TTL = 20          # seconds
 MAX_CACHE_SIZE = 50     # safety cap
 
 
@@ -92,7 +92,7 @@ def fetch_ad(slot_id: str):
             if now - ts < CACHE_TTL:
                 return ad  # may be None or a valid ad
 
-        # Safety reset
+        # Cache overflow guard
         if len(AD_CACHE) > MAX_CACHE_SIZE:
             AD_CACHE.clear()
 
@@ -104,7 +104,7 @@ def fetch_ad(slot_id: str):
         try:
             response = requests.get(url, timeout=0.15)
         except Exception:
-            # Network unreachable → store None temporarily
+            # Network unreachable → store temporary None
             AD_CACHE[slot_id] = (None, now)
             return None
 
@@ -127,7 +127,6 @@ def fetch_ad(slot_id: str):
         return ad
 
     except Exception as e:
-        # Log / swallow (never break frontend)
         print("[ads_client ERROR]", e)
         return None
 
